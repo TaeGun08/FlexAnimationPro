@@ -50,7 +50,7 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             if (target.TryGetComponent(out Renderer rend))
             {
@@ -63,13 +63,13 @@ namespace FlexAnimation
                         yield return FlexTween.To(
                             () => mat.GetColor(propertyName),
                             val => mat.SetColor(propertyName, val),
-                            targetColor, duration, ease);
+                            targetColor, duration, ease, ignoreTimeScale, globalTimeScale);
                         break;
                     case MaterialPropType.Float:
                         yield return FlexTween.To(
                             () => mat.GetFloat(propertyName),
                             val => mat.SetFloat(propertyName, val),
-                            targetFloat, duration, ease);
+                            targetFloat, duration, ease, ignoreTimeScale, globalTimeScale);
                         break;
                     case MaterialPropType.Vector:
                         Debug.LogWarning("[FlexAnimation] Vector Material Property not fully supported in Native Mode.");

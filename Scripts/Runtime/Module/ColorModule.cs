@@ -43,26 +43,26 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             if (target.TryGetComponent(out Graphic graphic))
             {
                 if (useAlphaOnly)
-                    yield return FlexTween.To(() => graphic.color.a, x => { var c = graphic.color; c.a = x; graphic.color = c; }, alpha, duration, ease);
+                    yield return FlexTween.To(() => graphic.color.a, x => { var c = graphic.color; c.a = x; graphic.color = c; }, alpha, duration, ease, ignoreTimeScale, globalTimeScale);
                 else
-                    yield return FlexTween.To(() => graphic.color, x => graphic.color = x, color, duration, ease);
+                    yield return FlexTween.To(() => graphic.color, x => graphic.color = x, color, duration, ease, ignoreTimeScale, globalTimeScale);
             }
             else if (target.TryGetComponent(out SpriteRenderer sr))
             {
                 if (useAlphaOnly)
-                    yield return FlexTween.To(() => sr.color.a, x => { var c = sr.color; c.a = x; sr.color = c; }, alpha, duration, ease);
+                    yield return FlexTween.To(() => sr.color.a, x => { var c = sr.color; c.a = x; sr.color = c; }, alpha, duration, ease, ignoreTimeScale, globalTimeScale);
                 else
-                    yield return FlexTween.To(() => sr.color, x => sr.color = x, color, duration, ease);
+                    yield return FlexTween.To(() => sr.color, x => sr.color = x, color, duration, ease, ignoreTimeScale, globalTimeScale);
             }
             else if (target.TryGetComponent(out CanvasGroup cg))
             {
                 float targetAlpha = useAlphaOnly ? alpha : color.a;
-                yield return FlexTween.To(() => cg.alpha, x => cg.alpha = x, targetAlpha, duration, ease);
+                yield return FlexTween.To(() => cg.alpha, x => cg.alpha = x, targetAlpha, duration, ease, ignoreTimeScale, globalTimeScale);
             }
         }
     }

@@ -23,13 +23,13 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             Vector3 original = target.localScale;
             Vector3 targetScale = original + punch;
             
-            yield return FlexTween.To(() => target.localScale, x => target.localScale = x, targetScale, duration * 0.5f, ease);
-            yield return FlexTween.To(() => target.localScale, x => target.localScale = x, original, duration * 0.5f, ease);
+            yield return FlexTween.To(() => target.localScale, x => target.localScale = x, targetScale, duration * 0.5f, ease, ignoreTimeScale, globalTimeScale);
+            yield return FlexTween.To(() => target.localScale, x => target.localScale = x, original, duration * 0.5f, ease, ignoreTimeScale, globalTimeScale);
         }
     }
 }

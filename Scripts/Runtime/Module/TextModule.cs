@@ -50,7 +50,7 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             if (target.TryGetComponent(out TMP_Text tmp))
             {
@@ -67,7 +67,9 @@ namespace FlexAnimation
                         val => tmp.maxVisibleCharacters = (int)val,
                         (float)totalChars,
                         duration,
-                        ease
+                        ease,
+                        ignoreTimeScale,
+                        globalTimeScale
                     );
                 }
             }

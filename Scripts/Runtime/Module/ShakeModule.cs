@@ -35,7 +35,7 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             Debug.LogWarning("[FlexAnimation] Shake is not supported in Native Mode. Please install DOTween for full features.");
             yield break;

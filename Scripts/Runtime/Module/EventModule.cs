@@ -20,9 +20,16 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
-            if (duration > 0) yield return new WaitForSeconds(duration);
+            float effectiveDuration = duration;
+            if (globalTimeScale > 0.0001f) effectiveDuration /= globalTimeScale;
+
+            if (effectiveDuration > 0)
+            {
+                if (ignoreTimeScale) yield return new WaitForSecondsRealtime(effectiveDuration);
+                else yield return new WaitForSeconds(effectiveDuration);
+            }
             onTrigger?.Invoke();
         }
     }
