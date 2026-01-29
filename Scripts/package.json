@@ -1,0 +1,17 @@
+{
+  "name": "com.flexanimation.pro",
+  "version": "1.0.0",
+  "displayName": "Flex Animation Pro",
+  "description": "Professional procedural animation system for Unity.",
+  "unity": "2021.3",
+  "keywords": [
+    "animation",
+    "tween",
+    "procedural",
+    "flex"
+  ],
+  "author": {
+    "name": "FlexAnimation"
+  },
+  "dependencies": {}
+}
