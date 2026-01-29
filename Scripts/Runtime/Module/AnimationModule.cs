@@ -12,12 +12,7 @@ namespace FlexAnimation
     public enum FlexSpace { Local, World }
     public enum LoopMode { None, Loop, Yoyo }
 
-    public enum FlexLinkType
-    {
-        Append, // 이전 동작이 끝나고 실행 (순차)
-        Join,   // 이전 동작과 함께 실행 (동시)
-        Insert  // 특정 시간에 실행
-    }
+
 
     [Serializable]
     public abstract class AnimationModule
@@ -29,7 +24,7 @@ namespace FlexAnimation
 
         [Header("Settings")]
         public float duration = 0.5f;
-        public AnimEase ease = AnimEase.Linear;
+        public Ease ease = Ease.Linear;
         public LoopMode loop = LoopMode.None;
         public int loopCount = -1;
 
@@ -51,7 +46,7 @@ namespace FlexAnimation
             }
         }
         
-        protected Ease GetEase() => Enum.TryParse(ease.ToString(), out Ease res) ? res : Ease.Linear;
+        protected DG.Tweening.Ease GetEase() => Enum.TryParse(ease.ToString(), out DG.Tweening.Ease res) ? res : DG.Tweening.Ease.Linear;
 #endif
 
         // Native Fallback
