@@ -7,15 +7,33 @@ namespace FlexAnimation.Internal
 {
     public static class FlexTween
     {
-        public static IEnumerator To(Func<float> getter, Action<float> setter, float endValue, float duration, Ease easeType)
+using UnityEngine;
+using System;
+using System.Collections;
+using FlexAnimation;
+
+namespace FlexAnimation.Internal
+{
+    public static class FlexTween
+    {
+        public static IEnumerator To(Func<float> getter, Action<float> setter, float endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
+            if (duration <= 0)
+            {
+                setter(endValue);
+                yield break;
+            }
+
             float startValue = getter();
             float time = 0f;
 
             while (time < duration)
             {
-                time += Time.deltaTime;
-                float t = time / duration;
+                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
+                dt *= globalTimeScale;
+                time += dt;
+
+                float t = Mathf.Clamp01(time / duration);
                 float easedT = EvaluateEase(t, easeType);
                 
                 setter(Mathf.LerpUnclamped(startValue, endValue, easedT));
@@ -24,15 +42,24 @@ namespace FlexAnimation.Internal
             setter(endValue);
         }
 
-        public static IEnumerator To(Func<Vector3> getter, Action<Vector3> setter, Vector3 endValue, float duration, Ease easeType)
+        public static IEnumerator To(Func<Vector3> getter, Action<Vector3> setter, Vector3 endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
+            if (duration <= 0)
+            {
+                setter(endValue);
+                yield break;
+            }
+
             Vector3 startValue = getter();
             float time = 0f;
 
             while (time < duration)
             {
-                time += Time.deltaTime;
-                float t = time / duration;
+                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
+                dt *= globalTimeScale;
+                time += dt;
+
+                float t = Mathf.Clamp01(time / duration);
                 float easedT = EvaluateEase(t, easeType);
 
                 setter(Vector3.LerpUnclamped(startValue, endValue, easedT));
@@ -41,15 +68,24 @@ namespace FlexAnimation.Internal
             setter(endValue);
         }
 
-        public static IEnumerator To(Func<Color> getter, Action<Color> setter, Color endValue, float duration, Ease easeType)
+        public static IEnumerator To(Func<Color> getter, Action<Color> setter, Color endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
+            if (duration <= 0)
+            {
+                setter(endValue);
+                yield break;
+            }
+
             Color startValue = getter();
             float time = 0f;
 
             while (time < duration)
             {
-                time += Time.deltaTime;
-                float t = time / duration;
+                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
+                dt *= globalTimeScale;
+                time += dt;
+
+                float t = Mathf.Clamp01(time / duration);
                 float easedT = EvaluateEase(t, easeType);
 
                 setter(Color.LerpUnclamped(startValue, endValue, easedT));
@@ -58,15 +94,24 @@ namespace FlexAnimation.Internal
             setter(endValue);
         }
 
-        public static IEnumerator To(Func<Vector2> getter, Action<Vector2> setter, Vector2 endValue, float duration, Ease easeType)
+        public static IEnumerator To(Func<Vector2> getter, Action<Vector2> setter, Vector2 endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
+            if (duration <= 0)
+            {
+                setter(endValue);
+                yield break;
+            }
+
             Vector2 startValue = getter();
             float time = 0f;
 
             while (time < duration)
             {
-                time += Time.deltaTime;
-                float t = time / duration;
+                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
+                dt *= globalTimeScale;
+                time += dt;
+
+                float t = Mathf.Clamp01(time / duration);
                 float easedT = EvaluateEase(t, easeType);
 
                 setter(Vector2.LerpUnclamped(startValue, endValue, easedT));

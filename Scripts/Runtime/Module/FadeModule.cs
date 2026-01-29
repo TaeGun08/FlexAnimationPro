@@ -31,28 +31,28 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             if (target.TryGetComponent(out CanvasGroup cg))
             {
                 yield return FlexTween.To(
                     () => cg.alpha, 
                     x => cg.alpha = x, 
-                    endAlpha, duration, ease);
+                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale);
             }
             else if (target.TryGetComponent(out Graphic gr))
             {
                 yield return FlexTween.To(
                     () => gr.color.a, 
                     x => { Color c = gr.color; c.a = x; gr.color = c; }, 
-                    endAlpha, duration, ease);
+                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale);
             }
             else if (target.TryGetComponent(out SpriteRenderer sr))
             {
                 yield return FlexTween.To(
                     () => sr.color.a, 
                     x => { Color c = sr.color; c.a = x; sr.color = c; }, 
-                    endAlpha, duration, ease);
+                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale);
             }
         }
     }

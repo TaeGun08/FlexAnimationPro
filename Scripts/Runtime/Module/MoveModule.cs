@@ -67,7 +67,7 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             Vector3 offset = GetOffset();
 
@@ -84,7 +84,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => rect.anchoredPosition, 
                     val => rect.anchoredPosition = val, 
-                    targetPos, duration, ease);
+                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale);
             }
             else if (space == FlexSpace.Local)
             {
@@ -100,7 +100,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.localPosition, 
                     val => target.localPosition = val, 
-                    targetPos, duration, ease);
+                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale);
             }
             else
             {
@@ -116,7 +116,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.position, 
                     val => target.position = val, 
-                    targetPos, duration, ease);
+                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale);
             }
         }
 

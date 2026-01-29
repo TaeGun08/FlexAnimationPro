@@ -41,7 +41,7 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             Vector3 offset = GetOffset();
             Vector3 targetRot = endValue + offset;
@@ -54,7 +54,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.localEulerAngles, 
                     val => target.localEulerAngles = val, 
-                    targetRot, duration, ease);
+                    targetRot, duration, ease, ignoreTimeScale, globalTimeScale);
             }
             else
             {
@@ -64,7 +64,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.eulerAngles, 
                     val => target.eulerAngles = val, 
-                    targetRot, duration, ease);
+                    targetRot, duration, ease, ignoreTimeScale, globalTimeScale);
             }
         }
 

@@ -29,7 +29,7 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             Vector3 offset = GetOffset();
             Vector3 targetScale = endValue + offset;
@@ -40,7 +40,7 @@ namespace FlexAnimation
             yield return FlexTween.To(
                 () => target.localScale, 
                 val => target.localScale = val, 
-                targetScale, duration, ease);
+                targetScale, duration, ease, ignoreTimeScale, globalTimeScale);
         }
 
         private Vector3 GetOffset()

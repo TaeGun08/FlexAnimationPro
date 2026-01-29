@@ -89,19 +89,32 @@ namespace FlexAnimation
 
         private IEnumerator RunModuleRoutine(AnimationModule module, float delay)
         {
-            if (delay > 0)
+            float effectiveDelay = delay;
+            // If we want the delay to also respect the local timeScale:
+            if (timeScale > 0.0001f) effectiveDelay /= timeScale;
+
+            if (effectiveDelay > 0)
             {
-                yield return new WaitForSeconds(delay);
+                if (ignoreTimeScale)
+                    yield return new WaitForSecondsRealtime(effectiveDelay);
+                else
+                    yield return new WaitForSeconds(effectiveDelay);
             }
 
-            yield return module.CreateRoutine(transform);
+            yield return module.CreateRoutine(transform, ignoreTimeScale, timeScale);
         }
 
         private IEnumerator WaitAndComplete(float duration)
         {
-            if (duration > 0)
+            float effectiveDuration = duration;
+            if (timeScale > 0.0001f) effectiveDuration /= timeScale;
+
+            if (effectiveDuration > 0)
             {
-                yield return new WaitForSeconds(duration);
+                if (ignoreTimeScale)
+                    yield return new WaitForSecondsRealtime(effectiveDuration);
+                else
+                    yield return new WaitForSeconds(effectiveDuration);
             }
             OnComplete?.Invoke();
         }

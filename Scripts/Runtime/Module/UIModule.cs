@@ -45,7 +45,7 @@ namespace FlexAnimation
         }
 #endif
 
-        public override System.Collections.IEnumerator CreateRoutine(Transform target)
+        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             if (!target.TryGetComponent(out RectTransform rect)) yield break;
 
@@ -55,7 +55,7 @@ namespace FlexAnimation
                 Vector2 dest = anchorPosValue;
                 if (relative) dest += start;
                 
-                yield return FlexTween.To(() => rect.anchoredPosition, x => rect.anchoredPosition = x, dest, duration, ease);
+                yield return FlexTween.To(() => rect.anchoredPosition, x => rect.anchoredPosition = x, dest, duration, ease, ignoreTimeScale, globalTimeScale);
             }
 
             if (sizeDelta)
@@ -63,7 +63,7 @@ namespace FlexAnimation
                 Vector2 start = rect.sizeDelta;
                 Vector2 dest = sizeDeltaValue;
                 if (relative) dest += start;
-                yield return FlexTween.To(() => rect.sizeDelta, x => rect.sizeDelta = x, dest, duration, ease);
+                yield return FlexTween.To(() => rect.sizeDelta, x => rect.sizeDelta = x, dest, duration, ease, ignoreTimeScale, globalTimeScale);
             }
         }
     }

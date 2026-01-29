@@ -50,7 +50,7 @@ namespace FlexAnimation
 #endif
 
         // Native Fallback
-        public virtual IEnumerator CreateRoutine(Transform target)
+        public virtual IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             yield break; // Override in subclasses
         }
