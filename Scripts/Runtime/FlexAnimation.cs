@@ -22,6 +22,14 @@ namespace FlexAnimation
         private bool _isPlaying = false;
         private bool _isPaused = false;
 
+        // State Backup
+        private bool _hasSavedState = false;
+        private Vector3 _initPos;
+        private Quaternion _initRot;
+        private Vector3 _initScale;
+        private Vector2 _initAnchoredPos;
+        private Vector2 _initSizeDelta;
+
         private void OnEnable()
         {
             if (playOnEnable)
@@ -53,7 +61,11 @@ namespace FlexAnimation
 
         public void PlayAll()
         {
-            StopAndReset();
+            // If already playing, stop first (resets to start)
+            if (_isPlaying) StopAndReset();
+
+            // Save state if strictly new start
+            SaveInitialState();
             
             var targetModules = modules;
             if ((targetModules == null || targetModules.Count == 0) && preset != null)
@@ -82,8 +94,6 @@ namespace FlexAnimation
                 // Join keeps the current cursor
 
                 float startTime = cursor + module.delay;
-                // Note: Duration for scheduling is approximation.
-                // If looping, we assume 1 cycle for scheduling logic usually, or just start time.
                 float duration = module.duration;
                 
                 float endTime = startTime + duration;
@@ -112,8 +122,41 @@ namespace FlexAnimation
             _isPlaying = false;
             _isPaused = false;
             _runners.Clear();
-            // Note: State reset (rewind) is not implemented in modules yet.
-            // This just stops execution.
+            RestoreInitialState();
+        }
+
+        private void SaveInitialState()
+        {
+            if (_hasSavedState) return;
+
+            _initPos = transform.localPosition;
+            _initRot = transform.localRotation;
+            _initScale = transform.localScale;
+
+            if (transform is RectTransform rect)
+            {
+                _initAnchoredPos = rect.anchoredPosition;
+                _initSizeDelta = rect.sizeDelta;
+            }
+
+            _hasSavedState = true;
+        }
+
+        private void RestoreInitialState()
+        {
+            if (!_hasSavedState) return;
+
+            transform.localPosition = _initPos;
+            transform.localRotation = _initRot;
+            transform.localScale = _initScale;
+
+            if (transform is RectTransform rect)
+            {
+                rect.anchoredPosition = _initAnchoredPos;
+                rect.sizeDelta = _initSizeDelta;
+            }
+
+            _hasSavedState = false;
         }
 
         private void ProcessRunners(float dt)
@@ -140,47 +183,6 @@ namespace FlexAnimation
                 yield return delay;
             }
 
-            // Pass the local timeScale logic? 
-            // We are handling delta time in ProcessRunners.
-            // So we pass ignoreTimeScale=false (since we provide dt) and globalTimeScale=1f (since we scaled dt).
-            // Wait, FlexTween uses Time.deltaTime internally if we don't pass dt.
-            // BUT FlexTween accepts ignoreTimeScale and globalTimeScale parameters to calculate dt.
-            // My RoutineRunner calls MoveNext(). FlexTween Loop does 'yield return null'.
-            // When we yield null, FlexTween pauses. Next 'Step' calls MoveNext.
-            // FlexTween calculates dt inside its loop.
-            // FlexTween reads Time.deltaTime/unscaledDeltaTime directly.
-            // IF we want FlexTween to respect OUR calculated dt (from ProcessRunners), we have a problem.
-            // FlexTween is self-contained.
-            
-            // Solution: 
-            // In Runtime: FlexTween reads Time.deltaTime. This matches ProcessRunners logic mostly.
-            // In Editor: FlexTween reads Time.deltaTime which might be 0 or irregular?
-            // Actually, in Editor, Time.deltaTime works if EditorApplication.update is driven correctly?
-            // But FlexTween's "while (time < duration)" loop depends on accumulation.
-            
-            // Critical Issue: FlexTween calculates 'dt' internally.
-            // If I am manually stepping it in EditorPreviewUpdate, FlexTween will read 'Time.deltaTime' which might be wrong (e.g. 0.02 const, or real frame time).
-            // If I want to control time (e.g. for Pause/TimeScale), I passed params to FlexTween.
-            
-            // Runtime:
-            // Update() calls ProcessRunners. ProcessRunners calls Step() -> MoveNext().
-            // FlexTween loop runs ONCE per frame.
-            // FlexTween reads Time.deltaTime * globalTimeScale.
-            // This works for Runtime.
-            
-            // Editor:
-            // EditorPreviewUpdate calls ProcessRunners.
-            // FlexTween reads Time.deltaTime. 
-            // In Edit Mode, Time.deltaTime is time since last editor update. It is valid.
-            // So looping works.
-            
-            // Issue: Pause.
-            // If _isPaused is true, ProcessRunners is NOT called.
-            // FlexTween is NOT stepped.
-            // So FlexTween pauses.
-            // This works!
-            
-            // So I just need to pass the parameters correctly.
             yield return module.CreateRoutine(transform, ignoreTimeScale, timeScale);
         }
 
@@ -212,9 +214,6 @@ namespace FlexAnimation
 
                 if (_stack.Count == 0) return false;
 
-                // We try to execute logic.
-                // If the top stack is done, pop.
-                
                 IEnumerator top = _stack.Peek();
                 bool hasMore = false;
                 
@@ -239,22 +238,17 @@ namespace FlexAnimation
                     else if (current is IEnumerator sub)
                     {
                         _stack.Push(sub);
-                        // Recursively start the sub-routine? 
-                        // Typically we wait for next frame to step into it? 
-                        // Or step immediately? Unity steps immediately until yield.
-                        // Let's step immediately to avoid 1-frame lags on nesting.
                         return Step(0f); 
                     }
                     else if (current == null)
                     {
-                        // Yield return null; -> Wait for next frame.
                         return true;
                     }
                 }
                 else
                 {
                     _stack.Pop();
-                    if (_stack.Count > 0) return Step(0f); // Continue parent
+                    if (_stack.Count > 0) return Step(0f);
                 }
                 
                 return _stack.Count > 0;
