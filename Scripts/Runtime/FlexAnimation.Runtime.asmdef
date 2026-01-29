@@ -1,7 +1,9 @@
 {
     "name": "FlexAnimation.Runtime",
     "rootNamespace": "FlexAnimation",
-    "references": [],
+    "references": [
+        "Unity.TextMeshPro"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
