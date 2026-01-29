@@ -54,7 +54,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.localEulerAngles, 
                     val => target.localEulerAngles = val, 
-                    targetRot, duration, ease, ignoreTimeScale, globalTimeScale);
+                    targetRot, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
             else
             {
@@ -64,7 +64,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.eulerAngles, 
                     val => target.eulerAngles = val, 
-                    targetRot, duration, ease, ignoreTimeScale, globalTimeScale);
+                    targetRot, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
         }
 

@@ -7,108 +7,89 @@ namespace FlexAnimation.Internal
 {
     public static class FlexTween
     {
-        public static IEnumerator To(Func<float> getter, Action<float> setter, float endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
+        public static IEnumerator To(Func<float> getter, Action<float> setter, float endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f, LoopMode loopMode = LoopMode.None, int loopCount = -1)
         {
-            if (duration <= 0)
+            yield return RunTween(getter, setter, endValue, duration, easeType, ignoreTimeScale, globalTimeScale, loopMode, loopCount, Mathf.LerpUnclamped);
+        }
+
+        public static IEnumerator To(Func<Vector3> getter, Action<Vector3> setter, Vector3 endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f, LoopMode loopMode = LoopMode.None, int loopCount = -1)
+        {
+            yield return RunTween(getter, setter, endValue, duration, easeType, ignoreTimeScale, globalTimeScale, loopMode, loopCount, Vector3.LerpUnclamped);
+        }
+
+        public static IEnumerator To(Func<Color> getter, Action<Color> setter, Color endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f, LoopMode loopMode = LoopMode.None, int loopCount = -1)
+        {
+            yield return RunTween(getter, setter, endValue, duration, easeType, ignoreTimeScale, globalTimeScale, loopMode, loopCount, Color.LerpUnclamped);
+        }
+
+        public static IEnumerator To(Func<Vector2> getter, Action<Vector2> setter, Vector2 endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f, LoopMode loopMode = LoopMode.None, int loopCount = -1)
+        {
+            yield return RunTween(getter, setter, endValue, duration, easeType, ignoreTimeScale, globalTimeScale, loopMode, loopCount, Vector2.LerpUnclamped);
+        }
+
+        private static IEnumerator RunTween<T>(Func<T> getter, Action<T> setter, T endValue, float duration, Ease easeType, bool ignoreTimeScale, float globalTimeScale, LoopMode loopMode, int loopCount, Func<T, T, float, T> lerpFunc)
+        {
+             if (duration <= 0)
             {
                 setter(endValue);
                 yield break;
             }
 
-            float startValue = getter();
-            float time = 0f;
+            T startValue = getter();
+            T originalStart = startValue;
+            T originalEnd = endValue;
 
-            while (time < duration)
+            int currentLoop = 0;
+            bool isPlayingForward = true;
+
+            // -1 means infinite.
+            // Loop count logic: 
+            // 0 or 1 means play once? Usually 0 means once, 1 means 1 loop (play twice)?
+            // DOTween: SetLoops(3) means play 3 times.
+            // Standard interpretation: loopCount is total cycles? Or repeats?
+            // "loopCount = -1" -> Infinite.
+            // Let's assume loopCount is TOTAL iterations. If 1 (default?), it runs once.
+            // If user enters 2, it runs twice.
+            // If user enters -1, infinite.
+            
+            // Fix: If loopMode is None, treat as count = 1.
+            int targetLoops = (loopMode == LoopMode.None) ? 1 : loopCount;
+            
+            while (true)
             {
-                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
-                dt *= globalTimeScale;
-                time += dt;
+                float time = 0f;
+                T from = isPlayingForward ? originalStart : originalEnd;
+                T to = isPlayingForward ? originalEnd : originalStart;
 
-                float t = Mathf.Clamp01(time / duration);
-                float easedT = EvaluateEase(t, easeType);
+                while (time < duration)
+                {
+                    float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
+                    dt *= globalTimeScale;
+                    time += dt;
+
+                    float t = Mathf.Clamp01(time / duration);
+                    float easedT = EvaluateEase(t, easeType);
+
+                    setter(lerpFunc(from, to, easedT));
+                    yield return null;
+                }
                 
-                setter(Mathf.LerpUnclamped(startValue, endValue, easedT));
-                yield return null;
+                // Ensure finish exact value
+                setter(to);
+
+                currentLoop++;
+                if (targetLoops != -1 && currentLoop >= targetLoops) break;
+
+                if (loopMode == LoopMode.Yoyo)
+                {
+                    isPlayingForward = !isPlayingForward;
+                }
+                else if (loopMode == LoopMode.Loop)
+                {
+                    // Restart: Reset to original start for next frame (or just keep from/to as is for next iteration logic)
+                    setter(originalStart);
+                }
             }
-            setter(endValue);
-        }
-
-        public static IEnumerator To(Func<Vector3> getter, Action<Vector3> setter, Vector3 endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
-        {
-            if (duration <= 0)
-            {
-                setter(endValue);
-                yield break;
-            }
-
-            Vector3 startValue = getter();
-            float time = 0f;
-
-            while (time < duration)
-            {
-                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
-                dt *= globalTimeScale;
-                time += dt;
-
-                float t = Mathf.Clamp01(time / duration);
-                float easedT = EvaluateEase(t, easeType);
-
-                setter(Vector3.LerpUnclamped(startValue, endValue, easedT));
-                yield return null;
-            }
-            setter(endValue);
-        }
-
-        public static IEnumerator To(Func<Color> getter, Action<Color> setter, Color endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
-        {
-            if (duration <= 0)
-            {
-                setter(endValue);
-                yield break;
-            }
-
-            Color startValue = getter();
-            float time = 0f;
-
-            while (time < duration)
-            {
-                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
-                dt *= globalTimeScale;
-                time += dt;
-
-                float t = Mathf.Clamp01(time / duration);
-                float easedT = EvaluateEase(t, easeType);
-
-                setter(Color.LerpUnclamped(startValue, endValue, easedT));
-                yield return null;
-            }
-            setter(endValue);
-        }
-
-        public static IEnumerator To(Func<Vector2> getter, Action<Vector2> setter, Vector2 endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
-        {
-            if (duration <= 0)
-            {
-                setter(endValue);
-                yield break;
-            }
-
-            Vector2 startValue = getter();
-            float time = 0f;
-
-            while (time < duration)
-            {
-                float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
-                dt *= globalTimeScale;
-                time += dt;
-
-                float t = Mathf.Clamp01(time / duration);
-                float easedT = EvaluateEase(t, easeType);
-
-                setter(Vector2.LerpUnclamped(startValue, endValue, easedT));
-                yield return null;
-            }
-            setter(endValue);
         }
 
         private static float EvaluateEase(float t, Ease ease)

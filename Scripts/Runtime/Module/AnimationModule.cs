@@ -10,9 +10,6 @@ using FlexAnimation.Internal;
 namespace FlexAnimation
 {
     public enum FlexSpace { Local, World }
-    public enum LoopMode { None, Loop, Yoyo }
-
-
 
     [Serializable]
     public abstract class AnimationModule

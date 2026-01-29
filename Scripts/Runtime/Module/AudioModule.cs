@@ -31,8 +31,7 @@ namespace FlexAnimation
 
             if (effectiveDuration > 0)
             {
-                if (ignoreTimeScale) yield return new WaitForSecondsRealtime(effectiveDuration);
-                else yield return new WaitForSeconds(effectiveDuration);
+                yield return effectiveDuration;
             }
             PlayAudio(target);
         }

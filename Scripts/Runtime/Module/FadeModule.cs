@@ -38,21 +38,21 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => cg.alpha, 
                     x => cg.alpha = x, 
-                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale);
+                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
             else if (target.TryGetComponent(out Graphic gr))
             {
                 yield return FlexTween.To(
                     () => gr.color.a, 
                     x => { Color c = gr.color; c.a = x; gr.color = c; }, 
-                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale);
+                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
             else if (target.TryGetComponent(out SpriteRenderer sr))
             {
                 yield return FlexTween.To(
                     () => sr.color.a, 
                     x => { Color c = sr.color; c.a = x; sr.color = c; }, 
-                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale);
+                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
         }
     }

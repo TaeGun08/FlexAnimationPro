@@ -40,7 +40,7 @@ namespace FlexAnimation
             yield return FlexTween.To(
                 () => target.localScale, 
                 val => target.localScale = val, 
-                targetScale, duration, ease, ignoreTimeScale, globalTimeScale);
+                targetScale, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
         }
 
         private Vector3 GetOffset()

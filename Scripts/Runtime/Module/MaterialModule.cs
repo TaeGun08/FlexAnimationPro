@@ -63,13 +63,13 @@ namespace FlexAnimation
                         yield return FlexTween.To(
                             () => mat.GetColor(propertyName),
                             val => mat.SetColor(propertyName, val),
-                            targetColor, duration, ease, ignoreTimeScale, globalTimeScale);
+                            targetColor, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
                         break;
                     case MaterialPropType.Float:
                         yield return FlexTween.To(
                             () => mat.GetFloat(propertyName),
                             val => mat.SetFloat(propertyName, val),
-                            targetFloat, duration, ease, ignoreTimeScale, globalTimeScale);
+                            targetFloat, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
                         break;
                     case MaterialPropType.Vector:
                         Debug.LogWarning("[FlexAnimation] Vector Material Property not fully supported in Native Mode.");

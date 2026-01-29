@@ -69,7 +69,9 @@ namespace FlexAnimation
                         duration,
                         ease,
                         ignoreTimeScale,
-                        globalTimeScale
+                        globalTimeScale,
+                        loop,
+                        loopCount
                     );
                 }
             }

@@ -84,7 +84,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => rect.anchoredPosition, 
                     val => rect.anchoredPosition = val, 
-                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale);
+                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
             else if (space == FlexSpace.Local)
             {
@@ -100,7 +100,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.localPosition, 
                     val => target.localPosition = val, 
-                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale);
+                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
             else
             {
@@ -116,7 +116,7 @@ namespace FlexAnimation
                 yield return FlexTween.To(
                     () => target.position, 
                     val => target.position = val, 
-                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale);
+                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
         }
 
