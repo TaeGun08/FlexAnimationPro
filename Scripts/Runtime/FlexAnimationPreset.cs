@@ -3,13 +3,7 @@ using System.Collections.Generic;
 
 namespace FlexAnimation
 {
-    public enum FlexValueType
-    {
-        Constant,
-        RandomRange
-    }
-
-    [CreateAssetMenu(fileName = "New FlexPreset", menuName = "FlexAnimation/Preset")]
+    [CreateAssetMenu(fileName = "New Animation Preset", menuName = "FlexAnimation/Preset")]
     public class FlexAnimationPreset : ScriptableObject
     {
         [SerializeReference]
