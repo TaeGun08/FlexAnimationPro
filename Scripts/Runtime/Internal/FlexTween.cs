@@ -7,15 +7,6 @@ namespace FlexAnimation.Internal
 {
     public static class FlexTween
     {
-using UnityEngine;
-using System;
-using System.Collections;
-using FlexAnimation;
-
-namespace FlexAnimation.Internal
-{
-    public static class FlexTween
-    {
         public static IEnumerator To(Func<float> getter, Action<float> setter, float endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
             if (duration <= 0)
