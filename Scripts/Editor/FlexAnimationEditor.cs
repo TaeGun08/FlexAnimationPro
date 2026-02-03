@@ -313,7 +313,11 @@ namespace FlexAnimation
                 
                 if (!advanced)
                 {
-                    if (name == "linkType" || name == "ease" || name == "loop" || name == "loopCount" || name == "relative" || name == "randomSpread" || name == "space") 
+                    if (name == "linkType" || name == "ease" || name == "loop" || name == "loopCount" || name == "relative" || name == "randomSpread" || name == "space" || 
+                        name == "scrambleChars" || name == "waveFrequency" || name == "waveSpeed" || 
+                        name == "processMode" || name == "overlap" || name == "slideDirection" || name == "effectStrength" ||
+                        name == "vibrato" || name == "randomness" || name == "fadeOut" || name == "elasticity" ||
+                        name == "glitchStrength" || name == "waveAmplitude") // Keep for legacy safety
                         continue;
                 }
 
@@ -364,7 +368,7 @@ namespace FlexAnimation
             else if (typeName.Contains("UI")) iconName = "RectTransform Icon";
             else if (typeName.Contains("Punch") || typeName.Contains("Shake")) iconName = "Animation.EventMarker";
             else if (typeName.Contains("Audio")) iconName = "AudioSource Icon";
-            else if (typeName.Contains("Text")) iconName = "Text Asset Icon";
+            else if (typeName.Contains("Text")) iconName = "TextAsset Icon";
             else if (typeName.Contains("Material")) iconName = "Material Icon";
 
             return EditorGUIUtility.IconContent(iconName);

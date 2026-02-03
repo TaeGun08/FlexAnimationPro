@@ -56,7 +56,10 @@ namespace FlexAnimation
         public void EditorPreviewUpdate(float deltaTime)
         {
             if (!_isPlaying || _isPaused) return;
+
+            global::FlexAnimation.Internal.FlexTween.OverrideDeltaTime = deltaTime * timeScale;
             ProcessRunners(deltaTime * timeScale);
+            global::FlexAnimation.Internal.FlexTween.OverrideDeltaTime = null;
         }
 
         public void PlayAll()

@@ -7,6 +7,8 @@ namespace FlexAnimation.Internal
 {
     public static class FlexTween
     {
+        public static float? OverrideDeltaTime = null;
+
         public static IEnumerator To(Func<float> getter, Action<float> setter, float endValue, float duration, Ease easeType, bool ignoreTimeScale = false, float globalTimeScale = 1f, LoopMode loopMode = LoopMode.None, int loopCount = -1)
         {
             yield return RunTween(getter, setter, endValue, duration, easeType, ignoreTimeScale, globalTimeScale, loopMode, loopCount, Mathf.LerpUnclamped);
@@ -43,16 +45,6 @@ namespace FlexAnimation.Internal
             bool isPlayingForward = true;
 
             // -1 means infinite.
-            // Loop count logic: 
-            // 0 or 1 means play once? Usually 0 means once, 1 means 1 loop (play twice)?
-            // DOTween: SetLoops(3) means play 3 times.
-            // Standard interpretation: loopCount is total cycles? Or repeats?
-            // "loopCount = -1" -> Infinite.
-            // Let's assume loopCount is TOTAL iterations. If 1 (default?), it runs once.
-            // If user enters 2, it runs twice.
-            // If user enters -1, infinite.
-            
-            // Fix: If loopMode is None, treat as count = 1.
             int targetLoops = (loopMode == LoopMode.None) ? 1 : loopCount;
             
             while (true)
@@ -63,8 +55,17 @@ namespace FlexAnimation.Internal
 
                 while (time < duration)
                 {
-                    float dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
-                    dt *= globalTimeScale;
+                    float dt = 0f;
+                    if (OverrideDeltaTime.HasValue)
+                    {
+                        dt = OverrideDeltaTime.Value;
+                    }
+                    else
+                    {
+                        dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
+                        dt *= globalTimeScale;
+                    }
+                    
                     time += dt;
 
                     float t = Mathf.Clamp01(time / duration);
