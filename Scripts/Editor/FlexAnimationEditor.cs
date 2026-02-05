@@ -310,15 +310,52 @@ namespace FlexAnimation
             {
                 string name = iterator.name;
                 if (name == "enabled") continue;
+
+                // [Special Handling for MaterialModule Pipeline]
+                if (moduleProp.managedReferenceFullTypename.Contains("MaterialModule"))
+                {
+                    var pipelineProp = moduleProp.FindPropertyRelative("pipeline");
+                    var propNameProp = moduleProp.FindPropertyRelative("propertyName");
+                    var propTypeProp = moduleProp.FindPropertyRelative("propertyType");
+
+                    if (pipelineProp != null && propNameProp != null && propTypeProp != null)
+                    {
+                        if (pipelineProp.enumValueIndex == 0) // Standard
+                        {
+                            if (propTypeProp.enumValueIndex == 0) propNameProp.stringValue = "_Color";
+                            else if (propTypeProp.enumValueIndex == 1) propNameProp.stringValue = "_Glossiness";
+                            else if (propTypeProp.enumValueIndex == 3) propNameProp.stringValue = "_MainTex";
+                        }
+                        else if (pipelineProp.enumValueIndex == 1) // URP
+                        {
+                            if (propTypeProp.enumValueIndex == 0) propNameProp.stringValue = "_BaseColor";
+                            else if (propTypeProp.enumValueIndex == 1) propNameProp.stringValue = "_Smoothness";
+                            else if (propTypeProp.enumValueIndex == 3) propNameProp.stringValue = "_BaseMap";
+                        }
+                        
+                        // Hide propertyName field if not Custom or not in Advanced mode
+                        if (name == "propertyName" && pipelineProp.enumValueIndex != 2) continue;
+                    }
+                }
                 
                 if (!advanced)
                 {
-                    if (name == "linkType" || name == "ease" || name == "loop" || name == "loopCount" || name == "relative" || name == "randomSpread" || name == "space" || 
+                    // [Expert Only Fields]
+                    if (name == "linkType" || name == "ease" || name == "loop" || name == "loopCount" || name == "relative" || 
+                        name == "randomSpread" || name == "space" || name == "materialIndex" || name == "persist" || name == "interval" ||
                         name == "scrambleChars" || name == "waveFrequency" || name == "waveSpeed" || 
-                        name == "processMode" || name == "overlap" || name == "slideDirection" || name == "effectStrength" ||
+                        name == "overlap" || name == "slideDirection" || 
+                        name == "effectStrength" || name == "effectIntensity" || name == "effectColor" ||
                         name == "vibrato" || name == "randomness" || name == "fadeOut" || name == "elasticity" ||
-                        name == "glitchStrength" || name == "waveAmplitude") // Keep for legacy safety
+                        name == "glitchStrength" || name == "waveAmplitude" || name == "scrambleMode") 
                         continue;
+                    
+                    // Also hide propertyName in Basic View unless it's Custom
+                    if (name == "propertyName")
+                    {
+                        var pipelineProp = moduleProp.FindPropertyRelative("pipeline");
+                        if (pipelineProp == null || pipelineProp.enumValueIndex != 2) continue;
+                    }
                 }
 
                 if (name == "duration")

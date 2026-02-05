@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.Scripting.APIUpdating;
 using FlexAnimation.Internal;
 #if DOTWEEN_ENABLED
@@ -7,46 +8,48 @@ using DG.Tweening;
 
 namespace FlexAnimation
 {
-    public enum MaterialPropType { Color, Float, Vector }
+    public enum MaterialPropType { Color, Float, Vector, TextureOffset }
+    public enum MaterialMode { Property, Blend, Effect }
+    public enum MaterialEffect { None, Flash, Glitch, Pulse }
+    public enum ShaderPipeline { Standard, URP, Custom }
 
     [MovedFrom(true, null, "Assembly-CSharp", null)]
     [System.Serializable]
     public class MaterialModule : AnimationModule
     {
-        [Header("Target")]
-        public string propertyName = "_Color"; // Shader Property Name
-        public int materialIndex = 0; // Renderer's material index
+        [Header("Mode")]
+        public MaterialMode mode = MaterialMode.Property;
+        public int materialIndex = 0; 
+        public bool persist = true; // Maintain changes after animation ends
 
-        [Header("Values")]
+        [Header("Pipeline Settings")]
+        public ShaderPipeline pipeline = ShaderPipeline.URP;
+
+        [Header("Property Mode")]
+        public string propertyName = "_BaseColor";
         public MaterialPropType propertyType = MaterialPropType.Color;
         public Color targetColor = Color.white;
         public float targetFloat;
         public Vector4 targetVector;
+        public Vector2 targetOffset;
+
+        [Header("Blend Mode")]
+        public Material targetMaterial; // Single target (Legacy/Simple)
+        public List<Material> sequenceMaterials = new List<Material>(); 
+        public float interval = 0f; // Delay between steps
+
+        [Header("Effect Mode")]
+        public MaterialEffect effect = MaterialEffect.None;
+        public Color effectColor = Color.white;
+        public float effectIntensity = 1f;
+
+        private static MaterialPropertyBlock _reusableBlock;
+        private static MaterialPropertyBlock PropBlock => _reusableBlock ??= new MaterialPropertyBlock();
 
 #if DOTWEEN_ENABLED
         public override Tween CreateTween(Transform target)
         {
-            if (target.TryGetComponent(out Renderer rend))
-            {
-                if (materialIndex < 0 || materialIndex >= rend.materials.Length)
-                {
-                    Debug.LogWarning($"[FlexAnimation] Material Index {materialIndex} out of range for {target.name}");
-                    return null;
-                }
-
-                Material mat = rend.materials[materialIndex];
-                
-                switch (propertyType)
-                {
-                    case MaterialPropType.Color:
-                        return mat.DOColor(targetColor, propertyName, duration);
-                    case MaterialPropType.Float:
-                        return mat.DOFloat(targetFloat, propertyName, duration);
-                    case MaterialPropType.Vector:
-                        return mat.DOVector(targetVector, propertyName, duration);
-                }
-            }
-            return null;
+            return null; 
         }
 #endif
 
@@ -54,27 +57,144 @@ namespace FlexAnimation
         {
             if (target.TryGetComponent(out Renderer rend))
             {
-                if (materialIndex < 0 || materialIndex >= rend.materials.Length) yield break;
-                Material mat = rend.materials[materialIndex];
+                if (materialIndex < 0 || materialIndex >= rend.sharedMaterials.Length) yield break;
 
-                switch (propertyType)
+                // Use .material at runtime for persistence, .sharedMaterial for editor safety
+                Material activeMat = (persist && Application.isPlaying) ? rend.materials[materialIndex] : rend.sharedMaterials[materialIndex];
+                if (activeMat == null) yield break;
+
+                if (mode == MaterialMode.Property)
                 {
-                    case MaterialPropType.Color:
-                        yield return FlexTween.To(
-                            () => mat.GetColor(propertyName),
-                            val => mat.SetColor(propertyName, val),
-                            targetColor, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
-                        break;
-                    case MaterialPropType.Float:
-                        yield return FlexTween.To(
-                            () => mat.GetFloat(propertyName),
-                            val => mat.SetFloat(propertyName, val),
-                            targetFloat, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
-                        break;
-                    case MaterialPropType.Vector:
-                        Debug.LogWarning("[FlexAnimation] Vector Material Property not fully supported in Native Mode.");
-                        break;
+                    switch (propertyType)
+                    {
+                        case MaterialPropType.Color:
+                            Color startCol = activeMat.HasProperty(propertyName) ? activeMat.GetColor(propertyName) : Color.white;
+                            yield return FlexTween.To(() => 0f, t => {
+                                Color lerped = Color.LerpUnclamped(startCol, targetColor, t);
+                                ApplyColor(rend, activeMat, propertyName, lerped);
+                            }, 1f, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
+                            break;
+
+                        case MaterialPropType.Float:
+                            float startF = activeMat.HasProperty(propertyName) ? activeMat.GetFloat(propertyName) : 0f;
+                            yield return FlexTween.To(() => 0f, t => {
+                                float lerped = Mathf.LerpUnclamped(startF, targetFloat, t);
+                                ApplyFloat(rend, activeMat, propertyName, lerped);
+                            }, 1f, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
+                            break;
+
+                        case MaterialPropType.TextureOffset:
+                            Vector2 startO = activeMat.HasProperty(propertyName) ? activeMat.GetTextureOffset(propertyName) : Vector2.zero;
+                            yield return FlexTween.To(() => 0f, t => {
+                                Vector2 curOff = Vector2.LerpUnclamped(startO, targetOffset, t);
+                                ApplyOffset(rend, activeMat, propertyName, curOff);
+                            }, 1f, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
+                            break;
+                    }
                 }
+                else if (mode == MaterialMode.Blend)
+                {
+                    // Consolidate targets
+                    List<Material> targets = new List<Material>();
+                    if (sequenceMaterials != null && sequenceMaterials.Count > 0) targets.AddRange(sequenceMaterials);
+                    else if (targetMaterial != null) targets.Add(targetMaterial);
+                    
+                    if (targets.Count > 0)
+                    {
+                        string colProp = (pipeline == ShaderPipeline.Standard) ? "_Color" : "_BaseColor";
+                        
+                        foreach (var nextMat in targets)
+                        {
+                            if (nextMat == null) continue;
+                            
+                            // Re-read start color each step for chaining
+                            Color currentStartColor = activeMat.HasProperty(colProp) ? activeMat.GetColor(colProp) : Color.white;
+                            Color nextColor = nextMat.HasProperty(colProp) ? nextMat.GetColor(colProp) : Color.white;
+                            
+                            yield return FlexTween.To(() => 0f, t => {
+                                Color lerped = Color.Lerp(currentStartColor, nextColor, t);
+                                ApplyColor(rend, activeMat, colProp, lerped);
+                            }, 1f, duration, ease, ignoreTimeScale, globalTimeScale); 
+                            
+                            // Ensure final value is set before waiting
+                            ApplyColor(rend, activeMat, colProp, nextColor);
+                            
+                            if (interval > 0)
+                            {
+                                float wait = 0;
+                                while(wait < interval)
+                                {
+                                    wait += (ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime) * globalTimeScale;
+                                    yield return null;
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (mode == MaterialMode.Effect)
+                {
+                    string colProp = (pipeline == ShaderPipeline.Standard) ? "_Color" : "_BaseColor";
+                    Color originalCol = activeMat.HasProperty(colProp) ? activeMat.GetColor(colProp) : Color.white;
+                    
+                    yield return FlexTween.To(() => 0f, t => {
+                        float fxTime = t * duration * 10f; 
+                        
+                        if (effect == MaterialEffect.Flash) {
+                            float flash = Mathf.PingPong(fxTime, 1f);
+                            ApplyColor(rend, activeMat, colProp, Color.Lerp(originalCol, effectColor, flash * effectIntensity));
+                        }
+                        else if (effect == MaterialEffect.Glitch) {
+                            string texProp = (pipeline == ShaderPipeline.Standard) ? "_MainTex" : "_BaseMap";
+                            if (UnityEngine.Random.value > 0.8f) {
+                                float rx = UnityEngine.Random.Range(-0.1f, 0.1f) * effectIntensity;
+                                float ry = UnityEngine.Random.Range(-0.1f, 0.1f) * effectIntensity;
+                                ApplyOffsetST(rend, activeMat, texProp, new Vector4(1, 1, rx, ry));
+                            } else {
+                                ApplyOffsetST(rend, activeMat, texProp, new Vector4(1, 1, 0, 0));
+                            }
+                        }
+                        else if (effect == MaterialEffect.Pulse) {
+                            float pulse = (Mathf.Sin(fxTime) + 1f) * 0.5f; 
+                            Color c = Color.Lerp(originalCol, effectColor, pulse * effectIntensity);
+                            ApplyColor(rend, activeMat, colProp, c);
+                            if(activeMat.HasProperty("_EmissionColor")) ApplyColor(rend, activeMat, "_EmissionColor", c);
+                        }
+                    }, 1f, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
+                }
+            }
+        }
+
+        // --- Helpers ---
+        private void ApplyColor(Renderer rend, Material mat, string name, Color val) {
+            if (persist && Application.isPlaying) mat.SetColor(name, val);
+            else {
+                rend.GetPropertyBlock(PropBlock, materialIndex);
+                PropBlock.SetColor(name, val);
+                rend.SetPropertyBlock(PropBlock, materialIndex);
+            }
+        }
+        private void ApplyFloat(Renderer rend, Material mat, string name, float val) {
+            if (persist && Application.isPlaying) mat.SetFloat(name, val);
+            else {
+                rend.GetPropertyBlock(PropBlock, materialIndex);
+                PropBlock.SetFloat(name, val);
+                rend.SetPropertyBlock(PropBlock, materialIndex);
+            }
+        }
+        private void ApplyOffset(Renderer rend, Material mat, string name, Vector2 val) {
+            if (persist && Application.isPlaying) mat.SetTextureOffset(name, val);
+            else {
+                rend.GetPropertyBlock(PropBlock, materialIndex);
+                PropBlock.SetVector(name + "_ST", new Vector4(1, 1, val.x, val.y));
+                rend.SetPropertyBlock(PropBlock, materialIndex);
+            }
+        }
+        private void ApplyOffsetST(Renderer rend, Material mat, string name, Vector4 st) {
+            if (persist && Application.isPlaying) { /* Texture ST direct set not standard, skip for persist safety or need SetVector */ }
+            else {
+                rend.GetPropertyBlock(PropBlock, materialIndex);
+                PropBlock.SetVector(name + "_ST", st);
+                rend.SetPropertyBlock(PropBlock, materialIndex);
             }
         }
     }
