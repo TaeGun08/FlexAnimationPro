@@ -19,13 +19,14 @@ namespace FlexAnimation
     public enum TransitionStyle
     {
         None,
-        Fade,       // Pure Opacity
-        Flip,       // 3D Card Flip (X-Axis)
-        Spin,       // 2D Rotation (Z-Axis)
-        Slide,      // Directional Movement
-        Zoom,       // Scale Up/Down
-        Stretch,    // Elastic Squash & Stretch
-        Vortex,     // Swirling warping
+        Fade,
+        Slide,
+        Zoom,
+        Flip,    // Y-Axis (Card Flip)
+        Spin,    // Z-Axis (Wheel)
+        Tumble,  // X-Axis (Gymnastic)
+        Vortex,
+        Stretch
     }
 
     public enum TextEffect
@@ -78,6 +79,9 @@ namespace FlexAnimation
         {
             if (target.TryGetComponent(out TMP_Text tmp))
             {
+                // [Fix] Clear previous mesh state immediately
+                tmp.ForceMeshUpdate(true);
+                
                 string startText = tmp.text;
                 string endText = string.IsNullOrEmpty(customText) ? tmp.text : customText;
                 
@@ -98,7 +102,7 @@ namespace FlexAnimation
 
                 // Set initial text
                 tmp.text = paddedStart;
-                tmp.ForceMeshUpdate();
+                tmp.ForceMeshUpdate(true); // Ensure mesh is ready
 
                 yield return FlexTween.To(
                     () => 0f,
@@ -185,6 +189,7 @@ namespace FlexAnimation
                 );
                 
                 tmp.text = endText;
+                tmp.ForceMeshUpdate(true); // Final cleanup
             }
         }
 
@@ -196,43 +201,33 @@ namespace FlexAnimation
             
             if (processMode == TextProcessMode.Concurrent)
             {
-                // Scramble style: strictly based on threshold? Or smooth concurrent?
-                // Let's make it smooth concurrent but with random start times.
-                // Map global 0..1 to random start..end windows? 
-                // Simple approach: globalProgress * speed + offset
-                return Mathf.Clamp01(globalProgress * 1.5f - (randomSeed * 0.5f)); 
+                // Smooth concurrent with random offsets
+                return Mathf.Clamp01((globalProgress * 2f) - randomSeed); 
             }
             else // Sequential
             {
-                // Smooth Cascading Logic
-                // Global 0 -> 1 maps to sequential windows.
-                // Overlap 0: [0-0.1], [0.1-0.2]...
-                // Overlap 1: All start near same time but slightly delayed.
-                
                 if (total <= 1) return globalProgress;
 
-                float step = 1f / total;
-                float visibleWindow = step + (overlap * 0.5f); // Increase window size by overlap
+                // [Extreme Overlap Logic]
+                // overlap 0: Stagger window is 1.0 (Each char waits for previous)
+                // overlap 1: Stagger window is 0.0 (All chars start together)
+                float staggerWindow = 1f - overlap; 
                 
-                // Formula to map Global(0..1) to Local(0..1) for Index(i)
-                // Start time for char i: i * step * (1 - overlap)
-                float effectiveTotal = 1f + (visibleWindow * total * overlap); // Adjust total duration scale
+                // Minimum time each character takes to animate (10% of total duration)
+                float minCharDuration = 0.1f; 
+                float availableRange = 1f - minCharDuration;
                 
-                // Cleaner Cascading Math:
-                // We want the whole sequence to fit in 0..1.
-                // Let 'delay' be the spacing between starts.
-                float delay = (1f - overlap) / total; 
-                // Actually simpler:
-                // Start = index / total * (1 - overlap_factor)
-                // Duration of one char = something relative.
+                // Calculate start time for this character
+                // If overlap is 0, they are spread across the whole duration.
+                // If overlap is 1, all starts are 0.
+                float staggerOffset = (index / (float)(total - 1)) * availableRange * staggerWindow;
                 
-                // Let's use a robust "Waterfall" formula
-                float totalDelay = 1f - 0.2f; // Reserve 20% for individual animation time at least
-                float myStart = (float)index / total * (1f - overlap);
-                float myEnd = myStart + 0.2f + (overlap * 0.8f); // Width varies by overlap
+                // End time: Start time + individual duration (which grows with overlap)
+                float myDuration = minCharDuration + (overlap * availableRange);
+                float myStart = staggerOffset;
+                float myEnd = myStart + myDuration;
                 
-                // Remap globalProgress(0..1) to (myStart..myEnd) -> 0..1
-                // Standard mapping: (val - start) / (end - start)
+                // Map globalProgress to 0..1 within [myStart, myEnd]
                 float localP = (globalProgress - myStart) / (myEnd - myStart);
                 return Mathf.Clamp01(localP);
             }
@@ -244,53 +239,73 @@ namespace FlexAnimation
             if (p <= 0 || p >= 1) return;
 
             Vector3 center = (verts[idx] + verts[idx+2]) * 0.5f;
+            
+            // Shared Logic
             bool isOld = p < 0.5f;
             float t = isOld ? p * 2f : (p - 0.5f) * 2f; // 0->1 per phase
 
+            Quaternion rot = Quaternion.identity;
+            Vector3 scale = Vector3.one;
+            Vector3 posOffset = Vector3.zero;
+
             switch (style)
             {
-                case TransitionStyle.Flip:
-                    // 0->90 (Old), 270->360 (New)
-                    // Add slight Scale dip to simulate distance
-                    float angle = isOld ? Mathf.Lerp(0, 90, t) : Mathf.Lerp(270, 360, t);
-                    float scaleF = 1f - Mathf.Sin(t * Mathf.PI) * 0.3f; // Shrink slightly at peak
-                    Matrix4x4 matF = Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(angle, 0, 0), Vector3.one * scaleF);
-                    ApplyMatrix(verts, idx, matF, center);
+                case TransitionStyle.Zoom:
+                    // Scale: 1 -> 0 -> 1
+                    float s = isOld ? Mathf.Lerp(1f, 0f, t) : Mathf.Lerp(0f, 1f, t);
+                    scale = Vector3.one * s;
                     break;
 
-                case TransitionStyle.Spin:
-                    // Full spin with scale
-                    float spin = Mathf.Lerp(0, 360, p);
-                    float scaleS = p < 0.5f ? Mathf.Lerp(1, 0, t) : Mathf.Lerp(0, 1, t); // Zoom out/in
-                    ApplyMatrix(verts, idx, Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(0, 0, spin), Vector3.one * scaleS), center);
+                case TransitionStyle.Flip: // Y-Axis
+                    // 0 -> 90 (Invisible) -> 0 (Appear)
+                    float angleY = isOld ? Mathf.Lerp(0, 90, t) : Mathf.Lerp(270, 360, t);
+                    rot = Quaternion.Euler(0, angleY, 0);
+                    // Add slight scale dip for 3D feel
+                    scale = Vector3.one * (1f - Mathf.Sin(t * Mathf.PI) * 0.3f); 
+                    break;
+
+                case TransitionStyle.Tumble: // X-Axis (New)
+                    // Full 360 tumble
+                    float tumbleX = Mathf.Lerp(0, 360, p);
+                    rot = Quaternion.Euler(tumbleX, 0, 0);
+                    // Scale dip to hide the text swap moment
+                    float tumbleS = isOld ? Mathf.Lerp(1, 0, t) : Mathf.Lerp(0, 1, t);
+                    scale = Vector3.one * tumbleS; 
+                    break;
+
+                case TransitionStyle.Spin: // Z-Axis
+                    // Clean 2D Spin (Exactly 1 full turn from start to end)
+                    float spinZ = Mathf.Lerp(0, 360, p);
+                    rot = Quaternion.Euler(0, 0, spinZ);
+                    float spinS = isOld ? Mathf.Lerp(1, 0, t) : Mathf.Lerp(0, 1, t);
+                    scale = Vector3.one * spinS;
                     break;
 
                 case TransitionStyle.Slide:
-                    // Use slideDirection
-                    Vector3 offsetDir = new Vector3(slideDirection.x, slideDirection.y, 0) * 20f;
-                    // Old: 0 -> move away. New: move from away -> 0.
-                    Vector3 move = isOld ? Vector3.Lerp(Vector3.zero, offsetDir, t) : Vector3.Lerp(-offsetDir, Vector3.zero, t);
-                    ApplyOffset(verts, idx, move);
-                    break;
-
-                case TransitionStyle.Zoom:
-                    float scaleZ = isOld ? Mathf.Lerp(1, 0, t) : Mathf.Lerp(0, 1, t);
-                    ApplyMatrix(verts, idx, Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one * scaleZ), center);
+                    Vector3 moveDir = new Vector3(slideDirection.x, slideDirection.y, 0) * 20f;
+                    posOffset = isOld ? Vector3.Lerp(Vector3.zero, moveDir, t) : Vector3.Lerp(-moveDir, Vector3.zero, t);
                     break;
                     
                 case TransitionStyle.Stretch:
-                    // Elastic scale: X shrinks, Y grows (Squash) then swap.
+                    // Elastic: X shrinks, Y grows
                     float sy = isOld ? Mathf.Lerp(1, 0, t) : Mathf.Lerp(0, 1, t);
                     float sx = isOld ? Mathf.Lerp(1, 2, t) : Mathf.Lerp(2, 1, t);
-                    ApplyMatrix(verts, idx, Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(sx, sy, 1)), center);
+                    scale = new Vector3(sx, sy, 1);
                     break;
                     
                 case TransitionStyle.Vortex:
-                    float rotV = isOld ? Mathf.Lerp(0, 90, t) : Mathf.Lerp(-90, 0, t);
-                    float sclV = isOld ? Mathf.Lerp(1, 0, t) : Mathf.Lerp(0, 1, t);
-                    ApplyMatrix(verts, idx, Matrix4x4.TRS(Vector3.zero, Quaternion.Euler(0, 0, rotV), Vector3.one * sclV), center);
+                    // Intense swirling (3 full turns)
+                    float rotV = isOld ? Mathf.Lerp(0, 1080, t) : Mathf.Lerp(-1080, 0, t);
+                    // Sucking in feel using squared t
+                    float sclV = isOld ? (1f - t * t) : (t * t);
+                    rot = Quaternion.Euler(0, 0, rotV);
+                    scale = Vector3.one * sclV;
                     break;
             }
+            
+            // Apply Transforms
+            Matrix4x4 mat = Matrix4x4.TRS(posOffset, rot, scale);
+            ApplyMatrix(verts, idx, mat, center);
         }
 
         private void ApplyColor(TransitionStyle style, float p, Color32[] colors, int idx)
