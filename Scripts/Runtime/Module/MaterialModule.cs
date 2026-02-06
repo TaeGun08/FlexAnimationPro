@@ -101,22 +101,26 @@ namespace FlexAnimation
                     
                     if (targets.Count > 0)
                     {
-                        string colProp = (pipeline == ShaderPipeline.Standard) ? "_Color" : "_BaseColor";
+                        string colProp = (pipeline == ShaderPipeline.Custom) ? propertyName : ((pipeline == ShaderPipeline.Standard) ? "_Color" : "_BaseColor");
+                        float stepDuration = duration / targets.Count;
+
+                        // Track current color manually because PropertyBlock values cannot be read back easily from Material.GetColor
+                        Color currentDisplayColor = activeMat.HasProperty(colProp) ? activeMat.GetColor(colProp) : Color.white;
                         
                         foreach (var nextMat in targets)
                         {
                             if (nextMat == null) continue;
                             
-                            // Re-read start color each step for chaining
-                            Color currentStartColor = activeMat.HasProperty(colProp) ? activeMat.GetColor(colProp) : Color.white;
                             Color nextColor = nextMat.HasProperty(colProp) ? nextMat.GetColor(colProp) : Color.white;
-                            
+                            Color startColor = currentDisplayColor;
+
                             yield return FlexTween.To(() => 0f, t => {
-                                Color lerped = Color.Lerp(currentStartColor, nextColor, t);
-                                ApplyColor(rend, activeMat, colProp, lerped);
-                            }, 1f, duration, ease, ignoreTimeScale, globalTimeScale); 
+                                currentDisplayColor = Color.Lerp(startColor, nextColor, t);
+                                ApplyColor(rend, activeMat, colProp, currentDisplayColor);
+                            }, 1f, stepDuration, ease, ignoreTimeScale, globalTimeScale); 
                             
                             // Ensure final value is set before waiting
+                            currentDisplayColor = nextColor;
                             ApplyColor(rend, activeMat, colProp, nextColor);
                             
                             if (interval > 0)
@@ -133,7 +137,7 @@ namespace FlexAnimation
                 }
                 else if (mode == MaterialMode.Effect)
                 {
-                    string colProp = (pipeline == ShaderPipeline.Standard) ? "_Color" : "_BaseColor";
+                    string colProp = (pipeline == ShaderPipeline.Custom) ? propertyName : ((pipeline == ShaderPipeline.Standard) ? "_Color" : "_BaseColor");
                     Color originalCol = activeMat.HasProperty(colProp) ? activeMat.GetColor(colProp) : Color.white;
                     
                     yield return FlexTween.To(() => 0f, t => {
@@ -144,10 +148,13 @@ namespace FlexAnimation
                             ApplyColor(rend, activeMat, colProp, Color.Lerp(originalCol, effectColor, flash * effectIntensity));
                         }
                         else if (effect == MaterialEffect.Glitch) {
-                            string texProp = (pipeline == ShaderPipeline.Standard) ? "_MainTex" : "_BaseMap";
+                            // Determine texture property name
+                            string texProp = (pipeline == ShaderPipeline.Custom) ? propertyName : ((pipeline == ShaderPipeline.Standard) ? "_MainTex" : "_BaseMap");
+                            
                             if (UnityEngine.Random.value > 0.8f) {
-                                float rx = UnityEngine.Random.Range(-0.1f, 0.1f) * effectIntensity;
-                                float ry = UnityEngine.Random.Range(-0.1f, 0.1f) * effectIntensity;
+                                float strength = effectIntensity * 0.2f; // Scale intensity
+                                float rx = UnityEngine.Random.Range(-strength, strength);
+                                float ry = UnityEngine.Random.Range(-strength, strength);
                                 ApplyOffsetST(rend, activeMat, texProp, new Vector4(1, 1, rx, ry));
                             } else {
                                 ApplyOffsetST(rend, activeMat, texProp, new Vector4(1, 1, 0, 0));
@@ -190,7 +197,9 @@ namespace FlexAnimation
             }
         }
         private void ApplyOffsetST(Renderer rend, Material mat, string name, Vector4 st) {
-            if (persist && Application.isPlaying) { /* Texture ST direct set not standard, skip for persist safety or need SetVector */ }
+            if (persist && Application.isPlaying) {
+                mat.SetVector(name + "_ST", st);
+            }
             else {
                 rend.GetPropertyBlock(PropBlock, materialIndex);
                 PropBlock.SetVector(name + "_ST", st);

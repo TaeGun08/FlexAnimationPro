@@ -25,11 +25,35 @@ namespace FlexAnimation
 
         public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
-            Vector3 original = target.localScale;
-            Vector3 targetScale = original + punch;
-            
-            yield return FlexTween.To(() => target.localScale, x => target.localScale = x, targetScale, duration * 0.5f, ease, ignoreTimeScale, globalTimeScale);
-            yield return FlexTween.To(() => target.localScale, x => target.localScale = x, original, duration * 0.5f, ease, ignoreTimeScale, globalTimeScale);
+            Vector3 originalScale = target.localScale;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                float dt = (ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime) * globalTimeScale;
+                elapsed += dt;
+                float t = elapsed / duration;
+
+                // Damped Harmonic Motion (Punch Physics)
+                // s(t) = A * e^(-decay * t) * cos(freq * t)
+                // We map t (0..1) to physical time roughly based on vibrato
+                
+                float decay = 10f * (1f / elasticity); 
+                float freq = vibrato * Mathf.PI * 2f; 
+                float damp = Mathf.Exp(-decay * t);
+                float wave = Mathf.Sin(freq * t); // Sin starts at 0, punch usually starts at 0 deviation
+
+                // Shape: Rise fast then decay oscillating
+                // Using a curve that starts at 0, goes to 1, then oscillates to 0
+                
+                float strengthFactor = damp * wave;
+
+                target.localScale = originalScale + Vector3.Scale(punch, Vector3.one * strengthFactor);
+
+                yield return null;
+            }
+
+            target.localScale = originalScale;
         }
     }
 }

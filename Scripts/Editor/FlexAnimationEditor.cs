@@ -347,7 +347,10 @@ namespace FlexAnimation
                         name == "overlap" || name == "slideDirection" || 
                         name == "effectStrength" || name == "effectIntensity" || name == "effectColor" ||
                         name == "vibrato" || name == "randomness" || name == "fadeOut" || name == "elasticity" ||
-                        name == "glitchStrength" || name == "waveAmplitude" || name == "scrambleMode") 
+                        name == "glitchStrength" || name == "waveAmplitude" || name == "scrambleMode" ||
+                        // LookAt Advanced
+                        name == "forwardAxis" || name == "upAxis" || name == "lockX" || name == "lockY" || name == "lockZ" ||
+                        name == "useTargetTransform" || name == "targetOffset" || name == "smoothing") 
                         continue;
                     
                     // Also hide propertyName in Basic View unless it's Custom
@@ -386,7 +389,7 @@ namespace FlexAnimation
         private Color GetModuleColor(string typeName)
         {
             if (typeName.Contains("Move")) return ColorMove;
-            if (typeName.Contains("Rotate")) return ColorRotate;
+            if (typeName.Contains("Rotate") || typeName.Contains("LookAt")) return ColorRotate;
             if (typeName.Contains("Scale")) return ColorScale;
             if (typeName.Contains("Fade") || typeName.Contains("Color")) return ColorFade;
             if (typeName.Contains("UI")) return ColorUI;
@@ -399,7 +402,7 @@ namespace FlexAnimation
         {
             string iconName = "cs Script Icon";
             if (typeName.Contains("Move")) iconName = "MoveTool";
-            else if (typeName.Contains("Rotate")) iconName = "RotateTool";
+            else if (typeName.Contains("Rotate") || typeName.Contains("LookAt")) iconName = "RotateTool";
             else if (typeName.Contains("Scale")) iconName = "ScaleTool";
             else if (typeName.Contains("Fade") || typeName.Contains("Color")) iconName = "PreMatCube";
             else if (typeName.Contains("UI")) iconName = "RectTransform Icon";

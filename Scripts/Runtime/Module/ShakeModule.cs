@@ -37,8 +37,46 @@ namespace FlexAnimation
 
         public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
-            Debug.LogWarning("[FlexAnimation] Shake is not supported in Native Mode. Please install DOTween for full features.");
-            yield break;
+            Vector3 initialPos = target.localPosition;
+            Quaternion initialRot = target.localRotation;
+            Vector3 initialScale = target.localScale;
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                float dt = (ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime) * globalTimeScale;
+                elapsed += dt;
+
+                float percent = elapsed / duration;
+                // Decay strength over time if fadeOut is true
+                float currentStrength = fadeOut ? strength * (1f - percent) : strength;
+                
+                Vector3 randomOffset = new Vector3(
+                    Random.Range(-1f, 1f),
+                    Random.Range(-1f, 1f),
+                    Random.Range(-1f, 1f)
+                ) * currentStrength;
+
+                switch (type)
+                {
+                    case ShakeType.Position:
+                        target.localPosition = initialPos + randomOffset;
+                        break;
+                    case ShakeType.Rotation:
+                        target.localRotation = initialRot * Quaternion.Euler(randomOffset * 10f);
+                        break;
+                    case ShakeType.Scale:
+                        target.localScale = initialScale + randomOffset * 0.2f;
+                        break;
+                }
+
+                yield return null;
+            }
+
+            // Restore initial state
+            target.localPosition = initialPos;
+            target.localRotation = initialRot;
+            target.localScale = initialScale;
         }
     }
 }

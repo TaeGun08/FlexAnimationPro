@@ -2,7 +2,7 @@ namespace FlexAnimation
 {
     public enum FlexLinkType { Append, Join, Insert }
 
-    public enum LoopMode { None, Loop, Yoyo }
+    public enum LoopMode { None, Loop, Yoyo, Incremental }
 
     public enum Ease
     {

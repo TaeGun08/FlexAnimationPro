@@ -54,6 +54,35 @@ namespace FlexAnimation
                     x => { Color c = sr.color; c.a = x; sr.color = c; }, 
                     endAlpha, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
             }
+            else if (target.TryGetComponent(out Renderer rend))
+            {
+                // Support for 3D Renderer (Material alpha)
+                // Use .material only in Play Mode when persist is enabled
+                bool useInstance = Application.isPlaying; 
+                Material activeMat = useInstance ? rend.material : rend.sharedMaterial;
+                
+                string colProp = activeMat.HasProperty("_BaseColor") ? "_BaseColor" : "_BaseColor";
+                if (!activeMat.HasProperty(colProp)) colProp = "_Color";
+
+                MaterialPropertyBlock pb = new MaterialPropertyBlock();
+                
+                yield return FlexTween.To(
+                    () => activeMat.HasProperty(colProp) ? activeMat.GetColor(colProp).a : 1f,
+                    x => {
+                        if (useInstance) {
+                            Color c = activeMat.GetColor(colProp);
+                            c.a = x;
+                            activeMat.SetColor(colProp, c);
+                        } else {
+                            rend.GetPropertyBlock(pb);
+                            Color c = activeMat.GetColor(colProp);
+                            c.a = x;
+                            pb.SetColor(colProp, c);
+                            rend.SetPropertyBlock(pb);
+                        }
+                    },
+                    endAlpha, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
+            }
         }
     }
 }

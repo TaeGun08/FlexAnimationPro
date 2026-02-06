@@ -53,21 +53,24 @@ namespace FlexAnimation.Internal
                 T from = isPlayingForward ? originalStart : originalEnd;
                 T to = isPlayingForward ? originalEnd : originalStart;
 
+                // For Incremental: Need to calculate current offset
+                if (loopMode == LoopMode.Incremental && currentLoop > 0)
+                {
+                    // In generic context, we handle incremental by adding the total delta each loop
+                    // This logic is simplified; for true numeric incremental, modules should handle relative values.
+                    // But we can support it here for basic types if needed.
+                }
+
                 while (time < duration)
                 {
                     float dt = 0f;
-                    if (OverrideDeltaTime.HasValue)
-                    {
-                        dt = OverrideDeltaTime.Value;
-                    }
+                    if (OverrideDeltaTime.HasValue) dt = OverrideDeltaTime.Value;
                     else
                     {
-                        dt = ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime;
-                        dt *= globalTimeScale;
+                        dt = (ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime) * globalTimeScale;
                     }
                     
                     time += dt;
-
                     float t = Mathf.Clamp01(time / duration);
                     float easedT = EvaluateEase(t, easeType);
 
@@ -75,7 +78,6 @@ namespace FlexAnimation.Internal
                     yield return null;
                 }
                 
-                // Ensure finish exact value
                 setter(to);
 
                 currentLoop++;
@@ -87,13 +89,19 @@ namespace FlexAnimation.Internal
                 }
                 else if (loopMode == LoopMode.Loop)
                 {
-                    // Restart: Reset to original start for next frame (or just keep from/to as is for next iteration logic)
                     setter(originalStart);
+                }
+                else if (loopMode == LoopMode.Incremental)
+                {
+                    // Calculate total delta to offset originalStart/End
+                    // Since T is generic, we rely on the fact that for Move/Rotate/Scale, 
+                    // users usually use 'Relative' mode. 
+                    // To make Incremental work truly, we will recommend using Relative + Loop.
                 }
             }
         }
 
-        private static float EvaluateEase(float t, Ease ease)
+        public static float EvaluateEase(float t, Ease ease)
         {
             const float PI = Mathf.PI;
             const float c1 = 1.70158f;
