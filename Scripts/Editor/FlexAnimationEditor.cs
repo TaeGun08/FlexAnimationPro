@@ -68,7 +68,12 @@ namespace FlexAnimation
             if (isPreviewing)
             {
                 anim.EditorPreviewUpdate(deltaTime);
-                if (!Application.isPlaying) Repaint(); 
+                if (!Application.isPlaying)
+                {
+                    Repaint();
+                    SceneView.RepaintAll();
+                    EditorApplication.QueuePlayerLoopUpdate();
+                }
             }
         }
 

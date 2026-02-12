@@ -29,6 +29,13 @@ namespace FlexAnimation
         private Vector3 _initScale;
         private Vector2 _initAnchoredPos;
         private Vector2 _initSizeDelta;
+        
+        // Extended Backup for Fade/Color
+        private float _initAlpha = 1f;
+        private Color _initColor = Color.white;
+        private bool _hasCanvasGroup;
+        private bool _hasGraphic;
+        private bool _hasSpriteRenderer;
 
         private void OnEnable()
         {
@@ -142,6 +149,23 @@ namespace FlexAnimation
                 _initSizeDelta = rect.sizeDelta;
             }
 
+            // Save Fade/Color states
+            if (TryGetComponent(out CanvasGroup cg))
+            {
+                _initAlpha = cg.alpha;
+                _hasCanvasGroup = true;
+            }
+            if (TryGetComponent(out UnityEngine.UI.Graphic gr))
+            {
+                _initColor = gr.color;
+                _hasGraphic = true;
+            }
+            if (TryGetComponent(out SpriteRenderer sr))
+            {
+                _initColor = sr.color;
+                _hasSpriteRenderer = true;
+            }
+
             _hasSavedState = true;
         }
 
@@ -158,6 +182,11 @@ namespace FlexAnimation
                 rect.anchoredPosition = _initAnchoredPos;
                 rect.sizeDelta = _initSizeDelta;
             }
+
+            // Restore Fade/Color states
+            if (_hasCanvasGroup && TryGetComponent(out CanvasGroup cg)) cg.alpha = _initAlpha;
+            if (_hasGraphic && TryGetComponent(out UnityEngine.UI.Graphic gr)) gr.color = _initColor;
+            if (_hasSpriteRenderer && TryGetComponent(out SpriteRenderer sr)) sr.color = _initColor;
 
             _hasSavedState = false;
         }
