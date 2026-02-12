@@ -51,5 +51,9 @@ namespace FlexAnimation
         {
             yield break; // Override in subclasses
         }
+
+        public virtual void OnStop(Transform target) { }
+        public virtual void OnPause(Transform target) { }
+        public virtual void OnResume(Transform target) { }
     }
 }

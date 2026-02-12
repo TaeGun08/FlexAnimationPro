@@ -355,8 +355,23 @@ namespace FlexAnimation
                         name == "glitchStrength" || name == "waveAmplitude" || name == "scrambleMode" ||
                         // LookAt Advanced
                         name == "forwardAxis" || name == "upAxis" || name == "lockX" || name == "lockY" || name == "lockZ" ||
-                        name == "useTargetTransform" || name == "targetOffset" || name == "smoothing") 
+                        name == "useTargetTransform" || name == "targetOffset" || name == "smoothing" ||
+                        // Audio Advanced
+                        name == "loopPlayback" || name == "autoCrossfade" || name == "fadeInDuration" || name == "fadeOutDuration" ||
+                        name == "shuffle" || name == "loopPlaylist" || name == "crossfadeTime" || name == "songDuration" ||
+                        name.StartsWith("enable") || name.Contains("viz") || name.Contains("sync") || name == "frequencyBin" || name == "axisWeight" || name == "colorSensitivity") 
                         continue;
+                    
+                    // Specific logic for AudioModule Basic View
+                    if (moduleProp.managedReferenceFullTypename.Contains("AudioModule"))
+                    {
+                        var playModeProp = moduleProp.FindPropertyRelative("playMode");
+                        if (playModeProp != null)
+                        {
+                            if (playModeProp.enumValueIndex == 0 && name == "playlist") continue; // Single mode: hide playlist
+                            if (playModeProp.enumValueIndex == 1 && name == "clip") continue;     // Playlist mode: hide single clip
+                        }
+                    }
                     
                     // Also hide propertyName in Basic View unless it's Custom
                     if (name == "propertyName")
@@ -387,6 +402,22 @@ namespace FlexAnimation
                 else
                 {
                     EditorGUILayout.PropertyField(iterator, true);
+                }
+            }
+
+            // [AudioModule Skip Button]
+            if (moduleProp.managedReferenceFullTypename.Contains("AudioModule"))
+            {
+                var audioModule = moduleProp.managedReferenceValue as AudioModule;
+                if (audioModule != null && (Application.isPlaying || isPreviewing))
+                {
+                    EditorGUILayout.Space(5);
+                    GUI.backgroundColor = new Color(0.8f, 0.8f, 1f);
+                    if (GUILayout.Button(new GUIContent(" Skip Current Song", EditorGUIUtility.IconContent("Animation.NextKey").image), GUILayout.Height(24)))
+                    {
+                        audioModule.Skip();
+                    }
+                    GUI.backgroundColor = Color.white;
                 }
             }
         }
@@ -507,15 +538,25 @@ namespace FlexAnimation
 
         protected void StartPreview()
         {
+            var anim = target as FlexAnimation;
+            if (anim == null) return;
+
             lastEditorTime = EditorApplication.timeSinceStartup;
             isPreviewing = true;
-            if (target is FlexAnimation anim) anim.PlayAll();
+            
+            if (anim.IsPaused) anim.ResumeAll();
+            else anim.PlayAll();
         }
 
         protected void StopPreview()
         {
             isPreviewing = false;
-            if (target is FlexAnimation anim) anim.StopAndReset();
+            if (target is FlexAnimation anim)
+            {
+                anim.StopAndReset();
+                Repaint();
+                SceneView.RepaintAll();
+            }
         }
     }
 
@@ -620,28 +661,45 @@ namespace FlexAnimation
 
         private void DrawPlayerControls()
         {
+            var anim = target as FlexAnimation;
+            if (anim == null) return;
+
             EditorGUILayout.BeginHorizontal();
             
             float btnWidth = (EditorGUIUtility.currentViewWidth - 40) / 3f;
             
-            GUI.backgroundColor = new Color(0.7f, 1f, 0.7f);
-            if (GUILayout.Button(new GUIContent(" Play", EditorGUIUtility.IconContent("PlayButton").image), GUILayout.Height(32), GUILayout.Width(btnWidth)))
+            // Play / Resume
+            GUI.backgroundColor = (anim.IsPlaying && !anim.IsPaused) ? new Color(0.5f, 0.8f, 0.5f) : new Color(0.7f, 1f, 0.7f);
+            string playLabel = anim.IsPaused ? " Resume" : " Play";
+            if (GUILayout.Button(new GUIContent(playLabel, EditorGUIUtility.IconContent("PlayButton").image), GUILayout.Height(32), GUILayout.Width(btnWidth)))
             {
-                if (Application.isPlaying) ((FlexAnimation)target).PlayAll();
+                if (Application.isPlaying)
+                {
+                    if (anim.IsPaused) anim.ResumeAll();
+                    else anim.PlayAll();
+                }
                 else StartPreview();
             }
 
-            GUI.backgroundColor = new Color(1f, 1f, 0.7f);
+            // Pause
+            GUI.backgroundColor = anim.IsPaused ? new Color(0.8f, 0.8f, 0.5f) : new Color(1f, 1f, 0.7f);
             if (GUILayout.Button(new GUIContent(" Pause", EditorGUIUtility.IconContent("PauseButton").image), GUILayout.Height(32), GUILayout.Width(btnWidth)))
             {
-                if (Application.isPlaying) ((FlexAnimation)target).PauseAll();
-                else isPreviewing = false;
+                if (Application.isPlaying) anim.PauseAll();
+                else
+                {
+                    isPreviewing = false;
+                    anim.PauseAll();
+                    Repaint();
+                    SceneView.RepaintAll();
+                }
             }
 
+            // Stop
             GUI.backgroundColor = new Color(1f, 0.7f, 0.7f);
             if (GUILayout.Button(new GUIContent(" Stop", EditorGUIUtility.IconContent("PreMatQuad").image), GUILayout.Height(32), GUILayout.Width(btnWidth)))
             {
-                if (Application.isPlaying) ((FlexAnimation)target).StopAndReset();
+                if (Application.isPlaying) anim.StopAndReset();
                 else StopPreview();
             }
             

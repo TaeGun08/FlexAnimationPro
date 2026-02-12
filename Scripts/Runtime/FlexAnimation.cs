@@ -18,6 +18,9 @@ namespace FlexAnimation
         public UnityEngine.Events.UnityEvent OnPlay;
         public UnityEngine.Events.UnityEvent OnComplete;
 
+        public bool IsPlaying => _isPlaying;
+        public bool IsPaused => _isPaused;
+
         private List<RoutineRunner> _runners = new List<RoutineRunner>();
         private bool _isPlaying = false;
         private bool _isPaused = false;
@@ -71,8 +74,8 @@ namespace FlexAnimation
 
         public void PlayAll()
         {
-            // If already playing, stop first (resets to start)
-            if (_isPlaying) StopAndReset();
+            // Always stop and reset to ensure a clean state (stops audio, resets variables)
+            StopAndReset();
 
             // Save state if strictly new start
             SaveInitialState();
@@ -95,7 +98,7 @@ namespace FlexAnimation
 
             foreach (var module in targetModules)
             {
-                if (!module.enabled) continue;
+                if (module == null || !module.enabled) continue;
 
                 if (module.linkType == FlexLinkType.Append)
                 {
@@ -120,11 +123,13 @@ namespace FlexAnimation
         public void PauseAll()
         {
             _isPaused = true;
+            NotifyModules(m => m.OnPause(transform));
         }
         
         public void ResumeAll()
         {
             _isPaused = false;
+            NotifyModules(m => m.OnResume(transform));
         }
 
         public void StopAndReset()
@@ -133,6 +138,30 @@ namespace FlexAnimation
             _isPaused = false;
             _runners.Clear();
             RestoreInitialState();
+
+            NotifyModules(m => m.OnStop(transform));
+        }
+
+        public void AddParallelRoutine(IEnumerator routine)
+        {
+            if (routine == null) return;
+            _runners.Add(new RoutineRunner(routine));
+        }
+
+        private void NotifyModules(System.Action<AnimationModule> action)
+        {
+            var targetModules = modules;
+            if ((targetModules == null || targetModules.Count == 0) && preset != null)
+            {
+                targetModules = preset.modules;
+            }
+            if (targetModules != null)
+            {
+                foreach (var module in targetModules)
+                {
+                    if (module != null) action(module);
+                }
+            }
         }
 
         private void SaveInitialState()

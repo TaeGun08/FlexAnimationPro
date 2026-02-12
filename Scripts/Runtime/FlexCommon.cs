@@ -18,4 +18,20 @@ namespace FlexAnimation
         InElastic, OutElastic, InOutElastic,
         InBounce, OutBounce, InOutBounce
     }
+
+    internal class StaticCoroutine : UnityEngine.MonoBehaviour
+    {
+        private static StaticCoroutine _instance;
+        public static void Start(System.Collections.IEnumerator routine)
+        {
+            if (_instance == null)
+            {
+                UnityEngine.GameObject go = new UnityEngine.GameObject("FlexAudioCoroutine");
+                _instance = go.AddComponent<StaticCoroutine>();
+                if (UnityEngine.Application.isPlaying)
+                    UnityEngine.Object.DontDestroyOnLoad(go);
+            }
+            _instance.StartCoroutine(routine);
+        }
+    }
 }
