@@ -48,10 +48,8 @@ namespace FlexAnimation
         protected virtual void OnDisable()
         {
             EditorApplication.update -= OnEditorUpdate;
-            if (target != null && !Application.isPlaying && target is FlexAnimation anim)
-            {
-                anim.StopAndReset();
-            }
+            // Removed StopAndReset to allow audio/animations to continue playing 
+            // even when the object is deselected in the inspector during editor preview.
         }
 
         private void OnEditorUpdate()
@@ -359,7 +357,10 @@ namespace FlexAnimation
                         // Audio Advanced
                         name == "loopPlayback" || name == "autoCrossfade" || name == "fadeInDuration" || name == "fadeOutDuration" ||
                         name == "shuffle" || name == "loopPlaylist" || name == "crossfadeTime" || name == "songDuration" ||
-                        name.StartsWith("enable") || name.Contains("viz") || name.Contains("sync") || name == "frequencyBin" || name == "axisWeight" || name == "colorSensitivity") 
+                        name.StartsWith("enable") || name.Contains("viz") || name.Contains("sync") || name == "frequencyBin" || name == "axisWeight" || name == "colorSensitivity" ||
+                        // Color Advanced
+                        name == "useInitialColor" || name == "startColor" || name == "gradient" || name == "speed" || name == "intensity" || 
+                        name == "colorOnly" || name == "alphaOnly" || name == "materialPropertyName") 
                         continue;
                     
                     // Specific logic for AudioModule Basic View
@@ -371,6 +372,41 @@ namespace FlexAnimation
                             if (playModeProp.enumValueIndex == 0 && name == "playlist") continue; // Single mode: hide playlist
                             if (playModeProp.enumValueIndex == 1 && name == "clip") continue;     // Playlist mode: hide single clip
                         }
+                    }
+
+                    // [Smart Filtering for ColorModule]
+                    if (moduleProp.managedReferenceFullTypename.Contains("ColorModule"))
+                    {
+                        var modeProp = moduleProp.FindPropertyRelative("mode");
+                        int m = modeProp != null ? modeProp.enumValueIndex : 0;
+                        
+                        if (m != 0 && m != 3 && m != 5 && m != 6 && name == "targetColor") continue; // Single, Pulse, Impact, Flicker only
+                        if (m != 7 && name == "theme") continue; // Theme only
+                        if (m != 6 && (name == "relativeType" || name == "amount")) continue; // Relative only
+                        if (m != 1 && name == "gradient") continue; // Gradient only
+                    }
+
+                    // [Smart Filtering for MoveModule]
+                    if (moduleProp.managedReferenceFullTypename.Contains("MoveModule"))
+                    {
+                        var modeProp = moduleProp.FindPropertyRelative("mode");
+                        int m = modeProp != null ? modeProp.enumValueIndex : 0;
+                        
+                        if (m != 0 && m != 1 && name == "position") continue; 
+                        if (m != 2 && (name == "direction" || name == "distance")) continue;
+                        if (m != 3 && name == "targetTransform") continue;
+                        if (!advanced && name == "space") continue;
+                    }
+
+                    // [Smart Filtering for ScaleModule]
+                    if (moduleProp.managedReferenceFullTypename.Contains("ScaleModule"))
+                    {
+                        var modeProp = moduleProp.FindPropertyRelative("mode");
+                        int m = modeProp != null ? modeProp.enumValueIndex : 0;
+                        
+                        if (m != 0 && m != 2 && name == "uniformScale") continue;
+                        if (m != 1 && name == "freeScale") continue;
+                        if (m != 3 && (name == "speed" || name == "intensity")) continue;
                     }
                     
                     // Also hide propertyName in Basic View unless it's Custom

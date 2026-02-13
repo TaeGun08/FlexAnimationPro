@@ -1,132 +1,85 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
+using System.Collections;
 using FlexAnimation.Internal;
-#if DOTWEEN_ENABLED
-using DG.Tweening;
-#endif
+using UnityEngine.Scripting.APIUpdating;
 
 namespace FlexAnimation
 {
-    [MovedFrom(true, "", "Assembly-CSharp", null)]
+    public enum MoveAnimMode { Absolute, Relative, Direction, Target }
+    public enum MoveDirection { Left, Right, Up, Down, Forward, Back }
+
+    [MovedFrom(true, null, "Assembly-CSharp", null)]
     [System.Serializable]
     public class MoveModule : AnimationModule
     {
-        [Header("Values")]
-        public bool x, y, z;
-        public Vector3 endValue;
-        public bool relative = false;
-        
-        [Header("Space")]
+        [Header("Movement Mode")]
+        public MoveAnimMode mode = MoveAnimMode.Relative;
         public FlexSpace space = FlexSpace.Local;
-        public bool useAnchoredPosition; 
 
-        [Header("Randomness")]
-        public Vector3 randomSpread;
+        [Header("Position Settings")]
+        public Vector3 position; // Used for Absolute & Relative
+        public MoveDirection direction = MoveDirection.Right;
+        public float distance = 100f;
+        public Transform targetTransform;
 
-#if DOTWEEN_ENABLED
-        public override Tween CreateTween(Transform target)
+        public override IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
-            Vector3 offset = GetOffset();
-            
-            if (useAnchoredPosition && target.TryGetComponent(out RectTransform rect))
-            {
-                Vector2 targetAnchor = new Vector2(
-                    x ? endValue.x : rect.anchoredPosition.x,
-                    y ? endValue.y : rect.anchoredPosition.y
-                ) + (Vector2)offset;
-                
-                Tween t = rect.DOAnchorPos(targetAnchor, duration);
-                if (relative) t.SetRelative(true);
-                return t;
-            }
+            RectTransform rect = target as RectTransform;
+            Vector3 startPos = GetCurrentPos(target, rect);
+            Vector3 destination = CalculateDestination(target, startPos);
 
-            if (space == FlexSpace.Local)
-            {
-                Vector3 startLocal = target.localPosition;
-                Vector3 targetLocal = new Vector3(
-                    x ? endValue.x : startLocal.x,
-                    y ? endValue.y : startLocal.y,
-                    z ? endValue.z : startLocal.z
-                ) + offset;
-                
-                Tween t = target.DOLocalMove(targetLocal, duration);
-                if (relative) t.SetRelative(true);
-                return t;
-            }
-            
-            Vector3 startWorld = target.position;
-            Vector3 targetWorld = new Vector3(
-                x ? endValue.x : startWorld.x,
-                y ? endValue.y : startWorld.y,
-                z ? endValue.z : startWorld.z
-            ) + offset;
-
-            Tween tWorld = target.DOMove(targetWorld, duration);
-            if (relative) tWorld.SetRelative(true);
-            return tWorld;
-        }
-#endif
-
-        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
-        {
-            Vector3 offset = GetOffset();
-
-            if (useAnchoredPosition && target.TryGetComponent(out RectTransform rect))
-            {
-                Vector2 startPos = rect.anchoredPosition;
-                Vector2 targetPos = new Vector2(
-                    x ? endValue.x : startPos.x,
-                    y ? endValue.y : startPos.y
-                ) + (Vector2)offset;
-
-                if (relative) targetPos += startPos;
-
-                yield return FlexTween.To(
-                    () => rect.anchoredPosition, 
-                    val => rect.anchoredPosition = val, 
-                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
-            }
-            else if (space == FlexSpace.Local)
-            {
-                Vector3 startPos = target.localPosition;
-                Vector3 targetPos = new Vector3(
-                    x ? endValue.x : startPos.x,
-                    y ? endValue.y : startPos.y,
-                    z ? endValue.z : startPos.z
-                ) + offset;
-
-                if (relative) targetPos += startPos;
-
-                yield return FlexTween.To(
-                    () => target.localPosition, 
-                    val => target.localPosition = val, 
-                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
-            }
-            else
-            {
-                Vector3 startPos = target.position;
-                Vector3 targetPos = new Vector3(
-                    x ? endValue.x : startPos.x,
-                    y ? endValue.y : startPos.y,
-                    z ? endValue.z : startPos.z
-                ) + offset;
-
-                if (relative) targetPos += startPos;
-
-                yield return FlexTween.To(
-                    () => target.position, 
-                    val => target.position = val, 
-                    targetPos, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
-            }
-        }
-
-        private Vector3 GetOffset()
-        {
-            return new Vector3(
-                UnityEngine.Random.Range(-randomSpread.x, randomSpread.x),
-                UnityEngine.Random.Range(-randomSpread.y, randomSpread.y),
-                UnityEngine.Random.Range(-randomSpread.z, randomSpread.z)
+            yield return FlexTween.To(
+                () => GetCurrentPos(target, rect),
+                val => SetPos(target, rect, val),
+                destination, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount
             );
+        }
+
+        private Vector3 GetCurrentPos(Transform t, RectTransform r)
+        {
+            if (r) return r.anchoredPosition3D;
+            return space == FlexSpace.Local ? t.localPosition : t.position;
+        }
+
+        private void SetPos(Transform t, RectTransform r, Vector3 val)
+        {
+            if (r) r.anchoredPosition3D = val;
+            else if (space == FlexSpace.Local) t.localPosition = val;
+            else t.position = val;
+        }
+
+        private Vector3 CalculateDestination(Transform t, Vector3 start)
+        {
+            switch (mode)
+            {
+                case MoveAnimMode.Absolute: 
+                    return position;
+                case MoveAnimMode.Relative: 
+                    return start + position;
+                case MoveAnimMode.Direction: 
+                    return start + GetDirVector() * distance;
+                case MoveAnimMode.Target: 
+                    if (targetTransform == null) return start;
+                    return (space == FlexSpace.Local && t.parent != null) 
+                        ? t.parent.InverseTransformPoint(targetTransform.position) 
+                        : targetTransform.position;
+                default: 
+                    return start;
+            }
+        }
+
+        private Vector3 GetDirVector()
+        {
+            switch (direction)
+            {
+                case MoveDirection.Left: return Vector3.left;
+                case MoveDirection.Right: return Vector3.right;
+                case MoveDirection.Up: return Vector3.up;
+                case MoveDirection.Down: return Vector3.down;
+                case MoveDirection.Forward: return Vector3.forward;
+                case MoveDirection.Back: return Vector3.back;
+                default: return Vector3.zero;
+            }
         }
     }
 }

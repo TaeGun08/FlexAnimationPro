@@ -1,55 +1,60 @@
 using UnityEngine;
-using UnityEngine.Scripting.APIUpdating;
+using System.Collections;
 using FlexAnimation.Internal;
-#if DOTWEEN_ENABLED
-using DG.Tweening;
-#endif
+using UnityEngine.Scripting.APIUpdating;
 
 namespace FlexAnimation
 {
+    public enum ScaleAnimMode { Uniform, Free, Pop, Breathe }
+
     [MovedFrom(true, null, "Assembly-CSharp", null)]
     [System.Serializable]
     public class ScaleModule : AnimationModule
     {
-        [Header("Values")]
-        public Vector3 endValue = Vector3.one;
-        public bool relative = false;
+        [Header("Scaling Mode")]
+        public ScaleAnimMode mode = ScaleAnimMode.Uniform;
 
-        [Header("Randomness")]
-        public Vector3 randomSpread;
+        [Header("Settings")]
+        public float uniformScale = 1.2f;
+        public Vector3 freeScale = Vector3.one;
+        
+        [Header("Effect Settings (Expert)")]
+        [Range(0.1f, 10f)] public float speed = 2f;
+        [Range(0f, 1f)] public float intensity = 0.15f;
 
-#if DOTWEEN_ENABLED
-        public override Tween CreateTween(Transform target)
+        public override IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
         {
-            Vector3 offset = GetOffset();
-
-            Tween t = target.DOScale(endValue + offset, duration);
-            if (relative) t.SetRelative(true);
-            return t;
-        }
-#endif
-
-        public override System.Collections.IEnumerator CreateRoutine(Transform target, bool ignoreTimeScale = false, float globalTimeScale = 1f)
-        {
-            Vector3 offset = GetOffset();
-            Vector3 targetScale = endValue + offset;
             Vector3 startScale = target.localScale;
-
-            if (relative) targetScale += startScale;
-
-            yield return FlexTween.To(
-                () => target.localScale, 
-                val => target.localScale = val, 
-                targetScale, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
-        }
-
-        private Vector3 GetOffset()
-        {
-            return new Vector3(
-                UnityEngine.Random.Range(-randomSpread.x, randomSpread.x),
-                UnityEngine.Random.Range(-randomSpread.y, randomSpread.y),
-                UnityEngine.Random.Range(-randomSpread.z, randomSpread.z)
-            );
+            
+            if (mode == ScaleAnimMode.Pop)
+            {
+                // Instant feedback pop
+                yield return FlexTween.To(() => startScale, val => target.localScale = val, startScale * uniformScale, duration * 0.3f, Ease.OutBack, ignoreTimeScale, globalTimeScale);
+                yield return FlexTween.To(() => target.localScale, val => target.localScale = val, startScale, duration * 0.7f, Ease.OutBounce, ignoreTimeScale, globalTimeScale);
+            }
+            else if (mode == ScaleAnimMode.Breathe)
+            {
+                float elapsed = 0f;
+                while (elapsed < duration || loop != LoopMode.None)
+                {
+                    float dt = (ignoreTimeScale ? Time.unscaledDeltaTime : Time.deltaTime) * globalTimeScale;
+                    
+                    var owner = target.GetComponent<FlexAnimation>();
+                    if (owner != null && owner.IsPaused) dt = 0;
+                    
+                    elapsed += dt;
+                    float wave = Mathf.Sin(elapsed * speed * Mathf.PI) * intensity;
+                    target.localScale = startScale * (1f + wave);
+                    
+                    if (duration > 0 && elapsed >= duration && loop == LoopMode.None) break;
+                    yield return null;
+                }
+            }
+            else
+            {
+                Vector3 dest = mode == ScaleAnimMode.Uniform ? Vector3.one * uniformScale : freeScale;
+                yield return FlexTween.To(() => startScale, val => target.localScale = val, dest, duration, ease, ignoreTimeScale, globalTimeScale, loop, loopCount);
+            }
         }
     }
 }
