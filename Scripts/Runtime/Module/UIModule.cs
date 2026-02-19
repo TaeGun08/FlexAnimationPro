@@ -53,25 +53,25 @@ namespace FlexAnimation
 
             if (usePosition)
             {
-                Tween t = rect.DOAnchorPos(position, duration).SetEase(ease);
+                Tween t = DOTween.To(() => rect.anchoredPosition, x => rect.anchoredPosition = x, (Vector2)position, duration).SetEase(ease);
                 if (relative) t.SetRelative(true);
                 AddToSeq(t);
             }
             if (useRotation)
             {
-                Tween t = rect.DORotate(rotation, duration).SetEase(ease);
+                Tween t = DOTween.To(() => rect.localEulerAngles, x => rect.localEulerAngles = x, rotation, duration).SetEase(ease);
                 if (relative) t.SetRelative(true);
                 AddToSeq(t);
             }
             if (useScale)
             {
-                Tween t = rect.DOScale(scale, duration).SetEase(ease);
+                Tween t = rect.transform.DOScale(scale, duration).SetEase(ease);
                 if (relative) t.SetRelative(true);
                 AddToSeq(t);
             }
             if (useSize)
             {
-                Tween t = rect.DOSizeDelta(sizeDelta, duration).SetEase(ease);
+                Tween t = DOTween.To(() => rect.sizeDelta, x => rect.sizeDelta = x, sizeDelta, duration).SetEase(ease);
                 if (relative) t.SetRelative(true);
                 AddToSeq(t);
             }

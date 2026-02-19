@@ -4,7 +4,8 @@
     "references": [
         "Unity.TextMeshPro",
         "Unity.UGUI",
-        "DOTween.Modules"
+        "DOTween.Modules",
+        "DOTween"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -13,6 +14,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.dg.tweening",
+            "expression": "",
+            "define": "DOTWEEN_ENABLED"
+        }
+    ],
     "noEngineReferences": false
 }
