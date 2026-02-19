@@ -2,7 +2,9 @@
     "name": "FlexAnimation.Runtime",
     "rootNamespace": "FlexAnimation",
     "references": [
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.UGUI",
+        "DOTween.Modules"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
