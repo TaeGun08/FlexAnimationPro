@@ -10,7 +10,7 @@ namespace FlexAnimation
 {
     public enum FlexEditorTheme { Modern, Minimal, Classic }
 
-    public class FlexBaseEditor : Editor
+    public class FlexBaseEditor : UnityEditor.Editor
     {
         protected SerializedProperty modulesProp;
         

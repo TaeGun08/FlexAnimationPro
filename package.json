@@ -1,6 +1,6 @@
 {
   "name": "com.taegun.flexanimationpro",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "displayName": "Flex Animation Pro",
   "description": "Flexible animation system",
   "unity": "2021.3",
@@ -8,5 +8,5 @@
     "name": "TaeGun08",
     "url": "https://github.com/TaeGun08"
   },
-  "_fingerprint": "127a90a98749e207bd17f634d12cdb0eaf2a328e"
+  "_fingerprint": "9cdb8f01670cca40b253ec1d2a514ce708e97fb9"
 }
